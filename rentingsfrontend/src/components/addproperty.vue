@@ -140,6 +140,10 @@
                 <option value="1">1</option>
                 <option value="2">2</option>
                 <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
                 <option value="other">other</option>
               </select>
             </template>
@@ -222,7 +226,7 @@ export default {
         tableData : [],
         propertiesOptions : [],
         selectedProperty: '',
-        selectedUnitsCsvFile: null
+        selectedUnitsCsvFile: null,
       }
     },
     methods:{
@@ -258,9 +262,10 @@ export default {
           headers: {'Content-type': 'multipart/form-data'}
 
         }).then((response) => {
-          console.log(response)
+          alert(response.data.message)
         }).catch((error) => {
-          console.log(error)
+          alert(error.response.data.message)
+
         })
 
       },
@@ -302,10 +307,12 @@ export default {
             method:"GET",
           }).then((response) => {
             if (response.status === 200){
+              console.log(response)
               this.propertiesOptions = response.data.propertiesData
             }
           }).catch((error) => {
             console.log(error)
+            alert(error.response.data.message)
           })
       },
 
@@ -331,7 +338,8 @@ export default {
           this.tableData = [];
           this.selectedProperty = ''
         }).catch((error) => {
-          console.log(error)
+          alert(error.response.data.message)
+
         })
       },
 
@@ -363,9 +371,11 @@ export default {
           data : formData,
           headers:{'Content-Type': 'multipart/form-data'},
         }).then((response) =>  {
-          console.log(response)
+          alert(response.data.message)
+          location.assign("http://localhost:5173/addproperty")
         }).catch((error) => {
-          console.log(error)
+          alert(error.response.data.message)
+          location.assign("http://localhost:5173/addproperty")
         })
 
       // Close the modal

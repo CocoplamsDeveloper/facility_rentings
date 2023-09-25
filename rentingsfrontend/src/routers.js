@@ -4,6 +4,7 @@ import Dashboard from './views/dashboard.vue'
 import PropertyPage from './views/properties.vue'
 import addProperties from './components/addproperty.vue'
 import TenantPage from './views/Tenants.vue'
+import updateProperty from './components/updateproperty.vue'
 
 
 const routes = [
@@ -33,6 +34,11 @@ const routes = [
     name: 'TenantPage',
     component: TenantPage
   },
+  {
+    path: '/update/property/:id',
+    name: 'updateProperty',
+    component: updateProperty
+  }
 
 ]
 

@@ -204,23 +204,30 @@ def get_tenant(request, id):
 def get_property(request, id):
 
     try:
+        user_id = request.query_params['userId']
         pid = id
-        if Property.objects.filter(property_id=pid).exists():
-            property_data = Property.objects.filter(property_id=pid)
-            property_data = json.loads(serializers.serialize('json', property_data))
+        if Landlord.objects.filter(landlord_id=user_id).exists():
+            if Property.objects.filter(property_id=pid).exists():
+                property_data = Property.objects.filter(property_id=pid)
+                property_data = json.loads(serializers.serialize('json', property_data))
 
-            if len(property_data) > 1:
-                response_payload = {"message": "Multiple properties with same ID"}
-                return Response(response_payload, 400)
+                if len(property_data) > 1:
+                    response_payload = {"message": "Multiple properties with same ID"}
+                    return Response(response_payload, 400)
 
-            response_payload = {
-                "property_data" : property_data
-            }
-            return Response(response_payload, 200)
-        
+                response_payload = {
+                    "property_data" : property_data
+                }
+                return Response(response_payload, 200)
+
+            else:
+                response_payload = {"message": 'Property Not Found'}
+                return Response(response_payload, 404)
         else:
-            response_payload = {"message": 'Property Not Found'}
-            return Response(response_payload, 404)
+            response_payload = {
+                'message' : "Invalid request"
+            }
+            return Response(response_payload, 401)
     except:
         traceback.print_exc()
         response_payload = {
@@ -487,7 +494,7 @@ def landlord_property_list(request):
     try:
         landlord_id = request.query_params['userId']
 
-        properties = Property.objects.filter(owned_by=landlord_id).values_list('property_id', 'property_name')[::1]
+        properties = Property.objects.filter(owned_by=landlord_id).values_list('property_id', 'property_name', 'property_type')[::1]
         property_data = []
         if len(properties) == 0:
             response_payload = {
@@ -498,7 +505,8 @@ def landlord_property_list(request):
             for prop in properties:
                 property_data.append({
                     "propertyId"  : prop[0],
-                    "propertyName" : prop[1]
+                    "propertyName" : prop[1],
+                    "propertyType" : prop[2]
                 })
 
             response_payload = {
@@ -566,13 +574,19 @@ def add_units(request):
         if Property.objects.filter(property_id=property_id).exists():
             if len(units_data) > 0:
                 for unit in units_data:
+                    unit_beds = unit['Unit Bedrooms']
+                    unit_baths = unit['Unit Bathrooms']
+                    if unit['Unit Bedrooms'] == "other":
+                        unit_beds = 0
+                    if unit['Unit Bathrooms'] == "other":
+                        unit_baths = 0
                     Units.objects.create(
                         unit_property = Property.objects.get(property_id=property_id),
                         unit_name =  unit['Unit Name/Number'],
                         unit_type = unit['Unit Type'],
                         unit_rent = unit['Unit Rent'],
-                        unit_bedrooms = int(unit['Unit Bedrooms']),
-                        unit_bathrooms_nos = int(unit['Unit Bathrooms']),
+                        unit_bedrooms = int(unit_beds),
+                        unit_bathrooms_nos = int(unit_baths),
                         area_insqmts = unit['Unit Size'],
                         unit_status = unit['Status'],
                         unit_occupied_by= Tenants.objects.get(tenant_id=2)
@@ -604,10 +618,10 @@ def get_units_from_csv(request):
     try:
         data = json.loads(request.data['data'])
         landlord_id = data['userId'],
+        print(landlord_id, "line613")
         property_id = data['propertyId'],
+        property_id = int(property_id[0])
         csv_file = request.FILES['unitscsvfile']
-
-        print(property_id, "line 610")
 
         FileSystemStorage(location='media').save(csv_file.name, csv_file)
         file_type = csv_file.name
@@ -629,13 +643,15 @@ def get_units_from_csv(request):
             data_to_send = file_data.to_dict('records')
 
         
-        if Property.objects.filter(property_id=property_id[0]).exists():
+        if Property.objects.filter(property_id=property_id).exists():
             if len(data_to_send) > 0:
                 for unit in data_to_send:
                     unit_beds = unit['Unit Bedrooms']
                     unit_baths = unit['Unit Bathrooms']
-                    if type(unit['Unit Bedrooms']) == str:
+                    if unit['Unit Bedrooms'] == "other":
                         unit_beds = 0
+                    elif type(unit['Unit Bedrooms']) == str:
+                        unit_beds = int(unit['Unit Bedrooms'])
                     if type(unit['Unit Bathrooms']) == str:
                         unit_baths = 0
                     Units.objects.create(
@@ -649,6 +665,8 @@ def get_units_from_csv(request):
                         unit_status = unit['Status'],
                         unit_occupied_by= Tenants.objects.get(tenant_id=2)
                     )
+
+                os.remove(f'media\{csv_file.name}')
                 response_payload = {
                     "message" : "Units Data updated!"
                 }
