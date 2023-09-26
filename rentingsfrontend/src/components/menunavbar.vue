@@ -29,6 +29,18 @@
         </div> -->
       </li>
       <li class="mb-1">
+        <a class="btn btn-toggle d-inline-flex align-items-center rounded border-0 collapsed" href="/units">
+          Units
+        </a>
+        <!-- <div class="collapse" id="dashboard-collapse">
+          <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+            <li><a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded">All Properties</a></li>
+            <li><a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded">Add Properties</a></li>
+            <li><a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded">Manage</a></li>
+          </ul>
+        </div> -->
+      </li>
+      <li class="mb-1">
         <a class="btn btn-toggle d-inline-flex align-items-center rounded border-0 collapsed" href="/tenants">
           Tenants
         </a>

@@ -618,7 +618,6 @@ def get_units_from_csv(request):
     try:
         data = json.loads(request.data['data'])
         landlord_id = data['userId'],
-        print(landlord_id, "line613")
         property_id = data['propertyId'],
         property_id = int(property_id[0])
         csv_file = request.FILES['unitscsvfile']
@@ -686,7 +685,73 @@ def get_units_from_csv(request):
             }
         return Response(response_payload, 500)
 
+@api_view(['POST'])
+def update_properties(request):
 
+    try:
+        updation_data = request.data['data']
+        print(updation_data, "line 693")
+        updation_data = json.loads(updation_data)
+        landlord_id = updation_data['userId']
+        property_id = updation_data['propertyId']
+        updated_image = None
+        if 'updatedImage' in request.data.keys():
+            print(request.data['updatedImage'])
+            updated_image = request.data['updatedImage']
+
+        if Landlord.objects.filter(landlord_id=landlord_id).exists():
+
+            if Property.objects.filter(property_id=property_id).exists():
+
+                Property.objects.filter(property_id=property_id).update(
+                property_name = updation_data['propertyName'],
+                property_type = updation_data['propertyType'],
+                owned_by = Landlord.objects.get(landlord_id=landlord_id),
+                governate = updation_data['governateName'],
+                Street=updation_data['propertyStreet'],
+                City=updation_data['propertyCity'],
+                Block=updation_data['propertyBlock'],
+                property_civil_id = updation_data['propertyCivil'],
+                property_number = updation_data['propertyNumber'],
+                area_insqmtrs = updation_data['propertySize'],
+                property_status = updation_data['propertyStatus'],
+                property_description = updation_data['propertyDescription'],
+                built_year = updation_data['propertyBuiltYear'],
+                selling_price = updation_data["propertySaleValue"],
+                buying_price = updation_data["propertyBuyValue"]
+                )
+
+                if updated_image is not None:
+
+                    previous_image = Property.objects.get(property_id=property_id).property_image
+                    if os.path.exists(previous_image.path):
+                        os.remove(previous_image.path)
+                    image = Property.objects.get(property_id=property_id)
+                    image.property_image = updated_image
+                    image.save()
+
+                response_payload = {
+                    'message' : "property Updated Successfully",
+                    'propertyId' : property_id,
+                }
+                return Response(response_payload, 200)
+            else:
+                response_payload = {
+                    'message' :  'Property does not exist'
+                }
+                return Response(response_payload, 401)
+
+        else:
+            response_payload = {
+                'message' :  'User does not exist'
+            }
+            return Response(response_payload, 401)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            'message' : "server error",
+        }
+        return Response(response_payload, 500)
 
 
 

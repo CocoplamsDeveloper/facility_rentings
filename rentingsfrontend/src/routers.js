@@ -5,6 +5,7 @@ import PropertyPage from './views/properties.vue'
 import addProperties from './components/addproperty.vue'
 import TenantPage from './views/Tenants.vue'
 import updateProperty from './components/updateproperty.vue'
+import unitsPage from './views/units.vue'
 
 
 const routes = [
@@ -38,7 +39,12 @@ const routes = [
     path: '/update/property/:id',
     name: 'updateProperty',
     component: updateProperty
-  }
+  },
+  {
+    path: '/units',
+    name: 'unitsPage',
+    component: unitsPage
+  },
 
 ]
 

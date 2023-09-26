@@ -63,10 +63,10 @@
   </div>
   <div class="col-md-4">
     <div class="card" :style="{width: '18rem', height: '18rem'}">
-        <img :src="'http://localhost:8000/'+this.propertyCurrentImage" alt=".." :style="{width: '18rem', height: '18rem'}">
+        <img :src="'http://localhost:8000/media/'+this.propertyCurrentImage" alt="No Image" :style="{width: '18rem', height: '18rem'}">
     </div>
   <label for="formFile" class="form-label">Property Image</label>
-  <input class="form-control" type="file" @change="imageUpload">
+  <input class="form-control" type="file" @change="captureImageToUpdate">
   </div>
   <div class="col-4">
     <label class="form-label">Property Booking Value</label>
@@ -77,7 +77,7 @@
     <input type="text" class="form-control" v-model="propertySaleValueUpdate">
   </div>
   <div class="col-12">
-    <button type='button' class="btn btn-primary" v-on:click="">Update</button>
+    <button type='button' class="btn btn-primary" v-on:click="updatePropertyFunc" :style="{marginLeft : '550px', marginTop:'20px'}">Update</button>
   </div>
 </form>
 </div>
@@ -112,6 +112,8 @@ export default {
             propertyBuyValueUpdate : '',
             propertySaleValueUpdate : '',
             propertyCurrentImage : '',
+            imageToUpdate : null,
+
         }
     },
     methods : {
@@ -125,7 +127,7 @@ export default {
             this.propertyStreetUpdate = data.Street,
             this.propertyBlockUpdate = data.Block,
             this.propertyNumberUpdate = data.property_number,
-            this.propertyCivilUpdate = data.propert_civil_id,
+            this.propertyCivilUpdate = data.property_civil_id,
             this.propertyDescriptionUpdate = data.property_description,
             this.propertySizeUpdate = data.area_insqmtrs,
             this.propertyBuiltYearUpdate = data.built_year,
@@ -152,7 +154,51 @@ export default {
             }).catch((error) => {
                 alert(error.response.data.message)
             })
+        },
+
+        updatePropertyFunc(){
+          let propId = this.$route.params.id
+
+          let propData = {
+          "userId" : localStorage.getItem("userId"),
+          "propertyId" : propId,
+          "propertyName":this.propertyNameUpdate,
+          "governateName" : this.propertyGovernateUpdate,
+          "propertyCity" : this.propertyCityUpdate,
+          "propertyStreet" : this.propertyStreetUpdate,
+          "propertyBlock" : this.propertyBlockUpdate,
+          "propertyNumber" : this.propertyNumberUpdate,
+          "propertyCivil" : this.propertyCivilUpdate,
+          "propertyDescription" : this.propertyDescriptionUpdate,
+          "propertyBuiltYear" : this.propertyBuiltYearUpdate,
+          "propertySaleValue" : this.propertySaleValueUpdate,
+          "propertyType" : this.propertyTypeUpdate,
+          "propertyStatus" : this.propertyStatusUpdate,
+          "propertyBuyValue" : this.propertyBuyValueUpdate,
+          "propertySize" :  this.propertySizeUpdate
+          }
+          
+          const formData = new FormData()
+          formData.append('data', JSON.stringify(propData))
+          if(this.imageToUpdate !== null){
+            formData.append('updatedImage', this.imageToUpdate)
+          }
+          axios({
+            url: 'http://localhost:8000/property/property/update',
+            method : 'POST',
+            data : formData,
+            headers : {'Content-type': 'multipart/form-data'}
+          }).then((response) => {
+            alert(response.data.message)
+            this.getPerProperty();
+          }).catch((error) => {
+            alert(error.response.data.message)
+          })
+        },
+        captureImageToUpdate(e){
+          this.imageToUpdate = e.target.files[0]
         }
+
     },
     mounted(){
         this.getPerProperty();
