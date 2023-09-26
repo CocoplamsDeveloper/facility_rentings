@@ -146,6 +146,7 @@
     </table>
   </div>
 
+  
 
 
 
@@ -290,7 +291,20 @@ export default {
         })
 
       // Close the modal
-      }
+      },
+      computed: {
+    filteredUnits() {
+      const { UnitNo, UnitName, UnitType } = this.filter;
+      return this.units.filter((unit) => {
+        // Apply filters for each column
+        return (
+          (UnitNo === '' || unit.UnitNo.includes(UnitNo)) &&
+          (UnitName === '' || unit.UnitName.includes(UnitName)) &&
+          (UnitType === '' || unit.UnitType === UnitType)
+          // Add similar conditions for other columns
+        );
+      });
+    },
 
     },
     mounted(){
