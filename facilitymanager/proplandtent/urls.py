@@ -20,6 +20,8 @@ urlpatterns = [
     path('alllandlord/props', views.get_landlord_properties_data),
     path('units/add', views.add_units),
     path('units/csv-add', views.get_units_from_csv),
-    path('property/update', views.update_properties)
+    path('property/update', views.update_properties),
+    path('allunits/get', views.get_landlord_all_units),
+    path('units/filter', views.get_filtered_units)
 ]
 

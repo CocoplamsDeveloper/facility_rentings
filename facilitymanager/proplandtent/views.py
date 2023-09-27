@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.core import serializers
 from .models import Landlord, Tenants, Property, TenancyLease, Units,UserRegistry, Role
 from django.core.files.storage import FileSystemStorage
-from django.core.files.base import ContentFile
+from django.db.models import Q
 import pandas as pd
 import traceback
 import requests
@@ -754,7 +754,94 @@ def update_properties(request):
         return Response(response_payload, 500)
 
 
+@api_view(['GET'])
+def get_landlord_all_units(request):
 
+
+    try:
+        user_id = request.query_params['userId']
+        units_to_send = []
+
+        if Landlord.objects.filter(landlord_id = user_id).exists():
+
+            landlord_properties = Property.objects.filter(owned_by = user_id).values_list('property_id', 'property_name')[::1]
+            if len(landlord_properties) < 1:
+                response_payload = {
+                    'message' : "No properties found",
+                    "unitsData" :  []
+                }
+                return Response(response_payload, 400)
+            for prop in landlord_properties:
+                units = Units.objects.filter(unit_property=prop[0])
+                units = json.loads(serializers.serialize('json', units))
+                for unit in units:
+                    units_to_send.append({
+                        "propertyId" : prop[0],
+                        "propertyName" : prop[1],
+                        "unitId" : unit['pk'],
+                        "unitsData" : unit['fields']
+                    })
+
+            response_payload = {
+                "message" : "fetched successfully",
+                "unitsData" : units_to_send
+            }
+
+            return Response(response_payload, 200)
+        else:
+            response_payload = {
+                "message" : "Invalid request",
+                "unitsData" : []
+            }
+            return Response(response_payload, 400)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
+
+@api_view(['POST'])
+def get_filtered_units(request):
+
+    try:
+        user_id = request.data['userId']
+        f_type = request.data['unitTypeFilter']
+        f_status = request.data['unitStatusFilter']
+        f_property = request.data['unitPropertyFilter']
+        print(request.data)
+
+        q_type = None
+        q_status = None
+        q_property = None
+        q_statement = None
+
+        if f_type is not None:
+            q_type = Q(unit_type=f_type)
+        if f_status is not None:
+            q_status = Q(unit_status=f_status)
+        if f_property is not None:
+            q_property = Q(unit_property=f_property)
+
+        # if units_filter_params['unitTypeFilter'] is not None:
+        #     q_type =  units_filter_params['unitTypeFilter']
+        # if units_filter_params['unitStatusFilter'] is not None:
+        #    q_status = units_filter_params['unitStatusFilter']
+        # if units_filter_params['unitPropertyFilter'] is not None:
+        #     q_property = units_filter_params['unitPropertyFilter']
+
+        # if
+        q_statement = q_property
+
+        # units_data = Units.objects.filter(q_statement).values()
+
+        return Response(200)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
 
 
 

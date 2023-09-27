@@ -23,7 +23,6 @@
                 <td>{{ prop.propertyName }}</td>
                 <td>{{ prop.propertyType }}</td>
                 <td><router-link class="btn btn-info" :to="'/update/property/'+prop.propertyId" >Update</router-link>
-                    <button class="btn btn-danger" v-on:click="deleteProperty(prop.propertyId)" :style="{marginLeft: '5px'}">Delete</button>
                 </td>
                 </tr>
             </tbody>

@@ -107,46 +107,53 @@
 
 </div>
 
-  <div>
-    <input type="text" v-model="filter.UnitNo" placeholder="Filter Unit No" />
-    <input type="text" v-model="filter.UnitName" placeholder="Filter Unit Name" />
-    <select v-model="filter.UnitType" @change="filterTable">
-      <option value="">All Types</option>
-      <option value="Type 1">Type 1</option>
-      <option value="Type 2">Type 2</option>
-      <option value="Type 3">Type 3</option>
-    </select>
-    <!-- Add similar filters for other columns -->
+<div class="showUnitsTable">
+  <h2 :style="{marginTop : '10px', marginBottom: '10px', textAlign:'center'}">Your Property Units</h2>
+  <table>
+    <thead>
+      <tr>
+        <td v-for="column in unitsTableColumns" >{{column}}</td>
+      </tr>
+      <tr>
+      <td v-for="column in unitsTableColumns">
 
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Unit No</th>
-          <th>Unit Name</th>
-          <th>Unit Type</th>
-          <th>Unit Rent</th>
-          <th>Unit Bedrooms</th>
-          <th>Unit Bathrooms</th>
-          <th>Unit Size</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="unit in filteredUnits" :key="unit.UnitNo">
-          <td>{{ unit.UnitNo }}</td>
-          <td>{{ unit.UnitName }}</td>
-          <td>{{ unit.UnitType }}</td>
-          <td>{{ unit.UnitRent }}</td>
-          <td>{{ unit.UnitBedrooms }}</td>
-          <td>{{ unit.UnitBathrooms }}</td>
-          <td>{{ unit.UnitSize }}</td>
-          <td>{{ unit.Status }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+      <select v-if="column === 'Property'" v-model="propertyUnitsValue" @change="getFilteredUnits">
+          <option value="">Choose</option>
+          <option v-for="option in propertiesOptions" :key="option.propertyId" :value="option.propertyId">{{ option.propertyName }}</option>
+      </select>
+      <select v-if="column === 'Unit Type'" v-model="unitsTypeValue" @change="getFilteredUnits">
+        <option value="">Choose</option>
+        <option value="room">room</option>
+        <option value="shop">shop</option>
+        <option value="store">store</option>
+        <option value="office">office</option>
+        <option value="other">other</option>
+      </select>
+      <select v-if="column === 'Status'" v-model="unitsStatusValue" @change="getFilteredUnits">
+          <option value="">Choose</option>
+          <option value="occupied">Occupied</option>
+          <option value="unoccupied">Unoccupied</option>
+      </select>
+      </td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="unit in allUnitsArray" :key="unit.unitId">
+        <td>{{ unit.unitsData.unit_name }}</td>
+        <td>{{ unit.unitsData.unit_type }}</td>
+        <td>{{ unit.unitsData.unit_rent }}</td>
+        <td>{{ unit.unitsData.unit_bedrooms }}</td>
+        <td>{{ unit.unitsData.unit_bathrooms_nos }}</td>
+        <td>{{ unit.unitsData.area_insqmts }}</td>
+        <td>{{ unit.unitsData.unit_status }}</td>
+        <td>{{ unit.propertyName }}</td>
+        <td><a class="btn btn-info">Edit</a></td>
+      </tr>
 
-  
+    </tbody>
+  </table>
+
+</div>
 
 
 
@@ -173,10 +180,25 @@ export default {
         "Unit Size",
         "Status",
       ],
+      unitsTableColumns : [
+      "Unit Name/Number",
+        "Unit Type",
+        "Unit Rent",
+        "Unit Bedrooms",
+        "Unit Bathrooms",
+        "Unit Size",
+        "Status",
+        "Property",
+        "Action"
+      ],
         tableData : [],
         propertiesOptions : [],
         selectedProperty: '',
         selectedUnitsCsvFile: null,
+        allUnitsArray : [],
+        propertyUnitsValue : null,
+        unitsStatusValue : null,
+        unitsTypeValue : null,
         }
 
     },
@@ -292,25 +314,67 @@ export default {
 
       // Close the modal
       },
-      computed: {
-    filteredUnits() {
-      const { UnitNo, UnitName, UnitType } = this.filter;
-      return this.units.filter((unit) => {
-        // Apply filters for each column
-        return (
-          (UnitNo === '' || unit.UnitNo.includes(UnitNo)) &&
-          (UnitName === '' || unit.UnitName.includes(UnitName)) &&
-          (UnitType === '' || unit.UnitType === UnitType)
-          // Add similar conditions for other columns
-        );
-      });
-    },
 
-    },
+      getPropertyUnits(){
+
+        let queryData = {
+          "userId" : localStorage.getItem("userId")
+        }
+
+        axios({
+          url: "http://localhost:8000/property/allunits/get",
+          method : 'GET',
+          params : queryData
+        }).then((response)=>{
+          console.log(response)
+          if(response.data.unitsData.length > 0){
+          this.allUnitsArray = response.data.unitsData
+          }
+          else{
+            alert(response.data.message)
+          }
+        }).catch((error) =>{
+          console.log(error)
+        })
+      },
+
+      getTypeFilter(){
+        return this.unitsTypeValue
+      },
+      getStatusFilter(){
+        return this.unitsStatusValue
+      },
+      getPropertyFilter(){
+        return this.propertyUnitsValue
+      },
+
+      getFilteredUnits(){
+        let queryData = {
+          "userId" :  localStorage.getItem('userId')
+        }
+
+        queryData["unitPropertyFilter"] = this.propertyUnitsValue
+        queryData["unitStatusValue"] = this.unitsStatusValue
+        queryData["unitsTypeValue"] = this.unitsTypeValue
+
+        axios({
+          url : "http://localhost:8000/property/units/filter",
+          method : 'POST',
+          data : queryData,
+        }).then((response) => {
+          console.log(response)
+        }).catch((error) => {
+          console.log(error)
+        })
+
+      }
+
+
+},
     mounted(){
         this.populatePropertiesList();
-    }
-
+        this.getPropertyUnits();
+    },
 }
 
 </script>
@@ -375,5 +439,12 @@ select {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
+}
+
+.showUnitsTable{
+  max-width: 100%; /* Set a maximum width for the container */
+  overflow-x: auto;
+  margin-left: 190px;
+  margin-top: 15px;
 }
 </style>
