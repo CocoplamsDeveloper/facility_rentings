@@ -353,10 +353,17 @@ export default {
           "userId" :  localStorage.getItem('userId')
         }
 
-        queryData["unitPropertyFilter"] = this.propertyUnitsValue
-        queryData["unitStatusValue"] = this.unitsStatusValue
-        queryData["unitsTypeValue"] = this.unitsTypeValue
+        if(this.propertyUnitsValue !== null){
+          queryData["unitPropertyFilter"] = this.propertyUnitsValue
+        }
+        if(this.unitsStatusValue !== null){
+          queryData["unitStatusFilter"] = this.unitsStatusValue
+        }
+        if(this.unitsTypeValue !== null){
+          queryData["unitTypeFilter"] = this.unitsTypeValue
+        }
 
+        console.log(queryData)
         axios({
           url : "http://localhost:8000/property/units/filter",
           method : 'POST',

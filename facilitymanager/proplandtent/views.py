@@ -806,22 +806,41 @@ def get_filtered_units(request):
 
     try:
         user_id = request.data['userId']
-        f_type = request.data['unitTypeFilter']
-        f_status = request.data['unitStatusFilter']
-        f_property = request.data['unitPropertyFilter']
+
         print(request.data)
+        f_type = None
+        f_status = None
+        f_property = None
 
-        q_type = None
-        q_status = None
-        q_property = None
-        q_statement = None
+        if 'unitTypeFilter' in request.data:
+            f_type = request.data['unitTypeFilter']
+        if 'unitStatusFilter' in request.data:
+            f_status = request.data['unitStatusFilter']
+        if 'unitPropertyFilter' in request.data:
+            f_property = request.data['unitPropertyFilter']
 
-        if f_type is not None:
-            q_type = Q(unit_type=f_type)
-        if f_status is not None:
-            q_status = Q(unit_status=f_status)
-        if f_property is not None:
-            q_property = Q(unit_property=f_property)
+        if f_type != None and f_status != None and f_property != None:
+            filtered_data = Units.objects.filter(unit_type=f_type, unit_status=f_status, unit_property=f_property).values()
+            print("inside 1")
+        elif f_type != None and f_status != None and f_property == None:
+            filtered_data = Units.objects.filter(unit_type=f_type, unit_status=f_status).values()
+            print("inside 2")
+        elif f_type != None and f_property != None and f_status == None:
+            filtered_data = Units.objects.filter(unit_type=f_type, unit_property=f_property).values()
+            print("inside 3")
+        elif f_status != None and f_property != None and f_type == None:
+            filtered_data = Units.objects.filter(unit_status=f_status, unit_property=f_property).values()
+            print("inside 4")
+        elif f_type != None and f_status == None and f_property == None:
+            filtered_data = Units.objects.filter(unit_type=f_type).values()
+            print("inside 5")
+        elif f_type == None and f_property != None and f_status == None:
+            filtered_data = Units.objects.filter(unit_property=f_property).values()
+            print("inside 6")
+        elif f_status != None and f_property == None and f_type == None:
+            filtered_data = Units.objects.filter(unit_status=f_status).values()
+            print("inside 7")
+        print(filtered_data)
 
         # if units_filter_params['unitTypeFilter'] is not None:
         #     q_type =  units_filter_params['unitTypeFilter']
@@ -831,7 +850,7 @@ def get_filtered_units(request):
         #     q_property = units_filter_params['unitPropertyFilter']
 
         # if
-        q_statement = q_property
+        # q_statement = q_property
 
         # units_data = Units.objects.filter(q_statement).values()
 
