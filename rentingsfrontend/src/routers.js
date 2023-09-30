@@ -5,7 +5,9 @@ import PropertyPage from './views/properties.vue'
 import addProperties from './components/addproperty.vue'
 import TenantPage from './views/Tenants.vue'
 import updateProperty from './components/updateproperty.vue'
-import unitsPage from './views/units.vue'
+import unitsPage from './views/units.vue';
+import updateUnits from './components/updateunits.vue';
+
 
 
 const routes = [
@@ -44,6 +46,11 @@ const routes = [
     path: '/units',
     name: 'unitsPage',
     component: unitsPage
+  },
+  {
+    path: '/update/unit/:id',
+    name: 'updateUnits',
+    component: updateUnits
   },
 
 ]

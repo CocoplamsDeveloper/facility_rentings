@@ -806,8 +806,6 @@ def get_filtered_units(request):
 
     try:
         user_id = request.data['userId']
-
-        print(request.data)
         f_type = None
         f_status = None
         f_property = None
@@ -818,6 +816,7 @@ def get_filtered_units(request):
             f_status = request.data['unitStatusFilter']
         if 'unitPropertyFilter' in request.data:
             f_property = request.data['unitPropertyFilter']
+
 
         if f_type != None and f_status != None and f_property != None:
             filtered_data = Units.objects.filter(unit_type=f_type, unit_status=f_status, unit_property=f_property).values()
@@ -840,21 +839,22 @@ def get_filtered_units(request):
         elif f_status != None and f_property == None and f_type == None:
             filtered_data = Units.objects.filter(unit_status=f_status).values()
             print("inside 7")
-        print(filtered_data)
 
-        # if units_filter_params['unitTypeFilter'] is not None:
-        #     q_type =  units_filter_params['unitTypeFilter']
-        # if units_filter_params['unitStatusFilter'] is not None:
-        #    q_status = units_filter_params['unitStatusFilter']
-        # if units_filter_params['unitPropertyFilter'] is not None:
-        #     q_property = units_filter_params['unitPropertyFilter']
+        filtered_arr = []
+        for unit in filtered_data:
+            filtered_arr.append({
+                "propertyId" : unit['unit_property_id'],
+                "propertyName" : Property.objects.get(property_id=unit['unit_property_id']).property_name,
+                "unitId" : unit['unit_id'],
+                "unitsData" : unit
+            })
+        
+        response_payload = {
+            "message" : "fetched successfully",
+            "filteredData" :  filtered_arr
+        }
 
-        # if
-        # q_statement = q_property
-
-        # units_data = Units.objects.filter(q_statement).values()
-
-        return Response(200)
+        return Response(response_payload, 200)
     except:
         traceback.print_exc()
         response_payload = {

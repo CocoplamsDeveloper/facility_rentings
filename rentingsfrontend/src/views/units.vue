@@ -118,11 +118,11 @@
       <td v-for="column in unitsTableColumns">
 
       <select v-if="column === 'Property'" v-model="propertyUnitsValue" @change="getFilteredUnits">
-          <option value="">Choose</option>
+          <option disabled value="">Choose</option>
           <option v-for="option in propertiesOptions" :key="option.propertyId" :value="option.propertyId">{{ option.propertyName }}</option>
       </select>
       <select v-if="column === 'Unit Type'" v-model="unitsTypeValue" @change="getFilteredUnits">
-        <option value="">Choose</option>
+        <option disabled value="">Choose</option>
         <option value="room">room</option>
         <option value="shop">shop</option>
         <option value="store">store</option>
@@ -130,10 +130,11 @@
         <option value="other">other</option>
       </select>
       <select v-if="column === 'Status'" v-model="unitsStatusValue" @change="getFilteredUnits">
-          <option value="">Choose</option>
+          <option disabled value="">Choose</option>
           <option value="occupied">Occupied</option>
           <option value="unoccupied">Unoccupied</option>
       </select>
+      <button class="btn btn-secondary" v-if="column === 'Action'" @click="clearUnitsTableFilters">Clear</button>
       </td>
       </tr>
     </thead>
@@ -147,10 +148,10 @@
         <td>{{ unit.unitsData.area_insqmts }}</td>
         <td>{{ unit.unitsData.unit_status }}</td>
         <td>{{ unit.propertyName }}</td>
-        <td><a class="btn btn-info">Edit</a></td>
+        <td><router-link class="btn btn-info" :to="'/update/unit/'+unit.unitId">Edit</router-link></td>
       </tr>
-
     </tbody>
+
   </table>
 
 </div>
@@ -328,6 +329,7 @@ export default {
         }).then((response)=>{
           console.log(response)
           if(response.data.unitsData.length > 0){
+          this.filteredUnitsFlag = false;
           this.allUnitsArray = response.data.unitsData
           }
           else{
@@ -338,15 +340,6 @@ export default {
         })
       },
 
-      getTypeFilter(){
-        return this.unitsTypeValue
-      },
-      getStatusFilter(){
-        return this.unitsStatusValue
-      },
-      getPropertyFilter(){
-        return this.propertyUnitsValue
-      },
 
       getFilteredUnits(){
         let queryData = {
@@ -363,18 +356,27 @@ export default {
           queryData["unitTypeFilter"] = this.unitsTypeValue
         }
 
-        console.log(queryData)
         axios({
           url : "http://localhost:8000/property/units/filter",
           method : 'POST',
           data : queryData,
         }).then((response) => {
-          console.log(response)
+          if(response.status == 200) {
+            this.allUnitsArray =  response.data.filteredData
+          }
         }).catch((error) => {
           console.log(error)
         })
 
-      }
+      },
+      clearUnitsTableFilters(){
+
+        this.getPropertyUnits();
+        this.propertyUnitsValue = null,
+        this.unitsStatusValue = null,
+        this.unitsTypeValue = null
+
+      },
 
 
 },
