@@ -3,6 +3,7 @@ import adminLogin from './views/adminlogin.vue'
 import Dashboard from './views/dashboard.vue'
 import PropertyPage from './views/properties.vue'
 import addProperties from './components/addproperty.vue'
+import addTenant from './components/addtenant.vue'
 import TenantPage from './views/Tenants.vue'
 import updateProperty from './components/updateproperty.vue'
 import unitsPage from './views/units.vue';
@@ -52,6 +53,11 @@ const routes = [
     name: 'updateUnits',
     component: updateUnits
   },
+  {
+    path: '/addtenant',
+    name : 'addTenant',
+    component : addTenant
+  }
 
 ]
 

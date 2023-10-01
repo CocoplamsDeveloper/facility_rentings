@@ -4,7 +4,7 @@
         <h1 id="tenantpageheading">Tenants</h1>
         <br/>
         <div class="addTenantdiv">
-        <a type="button" class="btn btn-primary" :style="{Position:'fixed'}" href="/addproperty" >Add Tenant</a>
+        <a type="button" class="btn btn-primary" :style="{Position:'fixed'}" href="/addtenant" >Add Tenant</a>
         </div>
         <div class="tenants-table">
             <table class="table table-striped-columns">

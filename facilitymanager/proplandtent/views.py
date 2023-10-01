@@ -37,68 +37,54 @@ available_roles = {
 
     
     
-def create_tenants(tenants_data):
+def generate_tenants(tenants_data, user_id, tenantFile):
 
     try:
-        data = tenants_data
-        tenants_creation = Tenants.objects.create(
-            firstname = data['firstName'],
-            lastname = data['lastName'],
-            contact_number = data['contactNumber'],
-            tenant_email = data['tenantEmail'],
-            nationality = data['nationality'],
-            previous_address = data['previousAddress'],
-            tenant_rent = data['tenantRentAmount'],
-        )
-
-        if tenants_creation:
-            return True
-
-    except:
-        return False
-    
-
-def create_units(units_data, propertyid, tenant_id):
-
-    try:
-        data = units_data
-        unit_creation = Units.objects.create(
-            unit_property = Property.objects.get(property_id=propertyid),
-            unit_name = data['unitName'],
-            unit_number = data['unitNumber'],
-            unit_floor = data['unitFloor'],
-            unit_bathroom_nos = data['unitbathrooms'],
-            area_insqmts = data['areasqmtrs'],
-            unit_occupied_by = data['unitOccupiedBy'],
-            unit_status = data['unoccupied'],
-        )
-        if unit_creation:
-            return True
+        tenant = tenants_data
+        tenant_file = tenantFile
+        if Tenants.objects.filter(tenant_email=tenant['userEmail']).exists():
+            return "tenant account exists"
         else:
-            return False
+            if UserRegistry.objects.filter(user_id=user_id).exists():
+                tt = Tenants.objects.create(
+                    app_user_id = UserRegistry.objects.get(user_id=user_id),
+                    landlord_email = tenant['userEmail'],
+                    firstname = tenant['userFirstname'],
+                    lastname = tenant['userLastname'],
+                    contact_number = tenant['contactNumber'],
+                    nationality =  tenant['userNationality'],
+                    tenant_status = tenant['userStatus'],
+                    tenant_rent = tenant['tenantRent'],
+                    previous_address = tenant['previousAddress'],
+                )
+                tt.save()
+                return True, tt.tenant_id
+            else:
+                return "User does not exist"
     except:
         traceback.print_exc()
         return False
+    
 
-def generate_landlord(user_data):
+def generate_landlord(user_data, user_id):
 
     try:
         landlord = user_data
-        if Landlord.objects.filter(landlord_email=landlord['user_email']).exists():
+        if Landlord.objects.filter(landlord_email=landlord['userEmail']).exists():
             return "landlord account exists"
         else:
-            if UserRegistry.objects.filter(user_id=landlord['user_id']).exists():
-                Landlord.objects.create(
-                    app_user_id = UserRegistry.objects.get(user_id=landlord['user_id']),
-                    landlord_email = landlord['user_email'],
-                    firstname = landlord['user_firstname'],
-                    lastname = landlord['user_lastname'],
-                    contact_number = landlord['user_contact_number'],
-                    nationality =  landlord['user_nationality'],
+            if UserRegistry.objects.filter(user_id=user_id).exists():
+                ld = Landlord.objects.create(
+                    app_user_id = UserRegistry.objects.get(user_id=user_id),
+                    landlord_email = landlord['userEmail'],
+                    firstname = landlord['userFirstname'],
+                    lastname = landlord['userLastname'],
+                    contact_number = landlord['contactNumber'],
+                    nationality =  landlord['userNationality'],
                     landlord_status = "active",
-                    landlord_password = landlord['user_password']
                 )
-                return True
+                ld.save()
+                return True, ld.landlord_id
             else:
                 return "User does not exist"
     except:
@@ -271,15 +257,17 @@ def get_units(request, id):
     try:
         unit_id = id
         if Units.objects.filter(unit_id=unit_id).exists():
-            units_data = TenancyLease.objects.filter(unit_id=unit_id)
-            units_data = json.loads(serializers.serialize('json', units_data))
+            units_data = Units.objects.filter(unit_id=unit_id).values()
+            print(units_data)
+            # units_data = json.loads(serializers.serialize('json', units_data))
 
             if len(units_data) > 1:
                 response_payload = {"message": "Multiple units with same ID"}
                 return Response(response_payload, 400)
 
             response_payload = {
-                "tenancy_data" : units_data
+                "message" : "fetched successfully",
+                "unitData" : units_data
             }
             return Response(response_payload, 200)
         
@@ -400,19 +388,31 @@ def create_users(request):
             return Response(response_payload, 400)
         else:
             role_id = available_roles[users_role]
-            UserRegistry.objects.create(
+            user = UserRegistry.objects.create(
                 user_firstname = users_data['userFirstname'],
                 user_lastname = users_data['userLastname'],
                 user_contact_number = users_data['contactNumber'],
                 user_email = users_data['userEmail'],
                 user_nationality = users_data['userNationality'],
                 user_role = Role.objects.get(role_id=role_id),
-                user_password = users_data['userPassword']
             )
-
+            user.save()
             if users_role == "landlord":
-                creation = generate_landlord(users_data)
-
+                creation, landlord_id = generate_landlord(users_data, user.user_id)
+                print("landlord id", landlord_id)
+                response_payload = {
+                    'message' : "landlord created successfully",
+                    'landlordId' : landlord_id
+                }
+                return Response(response_payload, 201)
+            if users_role == "tenant":
+                creation, tenant_id = generate_tenants(users_data, user.user_id)
+                print("tenant id", tenant_id)
+                response_payload = {
+                    'message' : "tenant created successfully",
+                    'tenantId' : tenant_id
+                }
+                return Response(response_payload, 201)
             if creation:
 
                 response_payload = {
@@ -862,9 +862,103 @@ def get_filtered_units(request):
         }
         return Response(response_payload, 500)
 
+@api_view(['POST'])
+def update_property_units(request):
+
+    try:
+        user_id = request.data['userId']
+        updation_data = request.data['updatedData']
+
+        unit_id = updation_data['unitId']
+        if Units.objects.filter(unit_id=unit_id).exists():
+
+            update_prompt = Units.objects.filter(unit_id=unit_id).update(
+                unit_name=updation_data['unitName/Number'],
+                unit_type=updation_data['unitType'],
+                unit_bedrooms = updation_data['unitBedrooms'],
+                unit_bathrooms_nos = updation_data['unitBathrooms'],
+                area_insqmts =  updation_data['unitSize'],
+                unit_status = updation_data['unitStatus'],
+                unit_rent = updation_data['unitRent'],
+            )
+
+            response_payload = {
+                "message"  : "Unit updated successfully",
+                "response_data" : {"unitId" : unit_id}
+            }
+
+            return Response(response_payload, 200)
+        else:
+            response_payload = {
+                "message"  : "Unit not found",
+            }
+            return Response(response_payload, 401)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" :  'server error'
+        }
+        return Response(response_payload, 500)
 
 
 
+@api_view(['DELETE'])
+def delete_units(request):
+
+    try:
+        print(request.data)
+        user_id = request.data["userId"]
+        unit_id = request.data['unitId']
+
+        if Landlord.objects.filter(landlord_id=user_id).exists():
+
+            if Units.objects.filter(unit_id=unit_id).exists():
+
+                Units.objects.get(unit_id=unit_id).delete()
+                response_payload = {
+                    "message" : "Unit Deleted successfully",
+                    "unitId" :  unit_id
+                }
+                return Response(response_payload, 200)
+            else:
+                response_payload = {
+                    "message" : "Unit Not found",
+                    "unitId" :  unit_id
+                }
+                return Response(response_payload, 400)
+        else:
+            response_payload = {
+                    "message" : "Invalid request",
+                    "unitId" :  unit_id
+                }
+            return Response(response_payload, 401)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 200)
+
+
+@api_view(['POST'])
+def create_tenants(request):
+
+    try:
+        landlord_id = request.data['userId']
+        tenants_details = request.data['tenantsData']
+        print(tenants_details)
+        # if Landlord.objects.filter(landlord_id=landlord_id).exists():
+
+
+
+
+        return Response(200)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
 
 
 

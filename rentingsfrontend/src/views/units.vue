@@ -148,7 +148,9 @@
         <td>{{ unit.unitsData.area_insqmts }}</td>
         <td>{{ unit.unitsData.unit_status }}</td>
         <td>{{ unit.propertyName }}</td>
-        <td><router-link class="btn btn-info" :to="'/update/unit/'+unit.unitId">Edit</router-link></td>
+        <td><router-link class="btn btn-info btn-sm" :to="'/update/unit/'+unit.unitId">Edit</router-link>
+        <a class="btn btn-danger btn-sm" type="button" @click="deleteUnit(unit.unitId, unit.unitsData.unit_name)">Delete</a>
+      </td>
       </tr>
     </tbody>
 
@@ -329,7 +331,6 @@ export default {
         }).then((response)=>{
           console.log(response)
           if(response.data.unitsData.length > 0){
-          this.filteredUnitsFlag = false;
           this.allUnitsArray = response.data.unitsData
           }
           else{
@@ -377,7 +378,33 @@ export default {
         this.unitsTypeValue = null
 
       },
+      deleteUnit(unitId, unitName){
 
+        let alert_resp = confirm("Are you sure you want to delete unit "+unitName)
+        let queryData = {
+          "userId" : localStorage.getItem("userId"),
+          "unitId" : unitId,
+        }
+        if(alert_resp){
+          
+          axios({
+            url : "http://localhost:8000/property/unit/delete",
+            method : 'DELETE',
+            data : queryData,
+          }).then((response) => {
+            console.log(response)
+            alert(response.data.message)
+          }).catch((error) => {
+            alert(error.response.data.message)
+          })
+
+        }
+        else{
+          return
+        }
+
+
+      },
 
 },
     mounted(){

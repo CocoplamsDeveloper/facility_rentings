@@ -15,13 +15,16 @@ urlpatterns = [
     path("ld-login", views.landlord_login),
     path("ld-logout", views.landlord_logout),
     path('add', views.create_properties),
-    path('create', views.create_users),
+    path('users/create', views.create_users),
     path('landlord-prop/get', views.landlord_property_list),
     path('alllandlord/props', views.get_landlord_properties_data),
     path('units/add', views.add_units),
     path('units/csv-add', views.get_units_from_csv),
     path('property/update', views.update_properties),
     path('allunits/get', views.get_landlord_all_units),
-    path('units/filter', views.get_filtered_units)
+    path('units/filter', views.get_filtered_units),
+    path('units/update', views.update_property_units),
+    path('unit/delete', views.delete_units),
+    path('tenant/add', views.create_tenants)
 ]
 

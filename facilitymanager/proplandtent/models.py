@@ -43,7 +43,7 @@ class Tenants(models.Model):
     nationality = models.CharField(max_length=100)
     previous_address = models.TextField(max_length=500, default=None)
     tenant_rent = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    docs = models.FileField(upload_to="documents/tenants_documents")
+    docs = models.FileField(upload_to="tenants_documents")
     tenant_status = models.CharField(max_length=150, default="inactive")
     tenants_password = models.CharField(max_length = 150, default="abc123")
 
