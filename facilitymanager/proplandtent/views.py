@@ -405,14 +405,14 @@ def create_users(request):
                     'landlordId' : landlord_id
                 }
                 return Response(response_payload, 201)
-            if users_role == "tenant":
-                creation, tenant_id = generate_tenants(users_data, user.user_id)
-                print("tenant id", tenant_id)
-                response_payload = {
-                    'message' : "tenant created successfully",
-                    'tenantId' : tenant_id
-                }
-                return Response(response_payload, 201)
+            # if users_role == "tenant":
+            #     creation, tenant_id = generate_tenants(users_data, user.user_id)
+            #     print("tenant id", tenant_id)
+            #     response_payload = {
+            #         'message' : "tenant created successfully",
+            #         'tenantId' : tenant_id
+            #     }
+            #     return Response(response_payload, 201)
             if creation:
 
                 response_payload = {
@@ -424,7 +424,6 @@ def create_users(request):
                     'message' : creation
                 }
                 return Response(response_payload)
-
     except:
         traceback.print_exc()
         response_payload = {
@@ -944,15 +943,58 @@ def delete_units(request):
 def create_tenants(request):
 
     try:
-        landlord_id = request.data['userId']
-        tenants_details = request.data['tenantsData']
-        print(tenants_details)
-        # if Landlord.objects.filter(landlord_id=landlord_id).exists():
+        recieved_data = json.loads(request.data['data'])
+        landlord_id = recieved_data['userId']
+        tenants_details = recieved_data
+        recieved_file = request.data['tenantDocFile']
 
+        if Landlord.objects.filter(landlord_id=landlord_id).exists():
 
+            if UserRegistry.objects.filter(user_email=tenants_details['userEmail']).exists():
+                response_payload = {
+                    'message' : "user already exists",
+                }
+                return Response(response_payload, 400)
+            else:
+                user = UserRegistry.objects.create(
+                    user_firstname = tenants_details['userFirstname'],
+                    user_lastname = tenants_details['userLastname'],
+                    user_contact_number = tenants_details['contactNumber'],
+                    user_email = tenants_details['userEmail'],
+                    user_nationality = tenants_details['userNationality'],
+                    user_role = Role.objects.get(role_id=3),
+                )
+                user.save()
 
+            if user.user_id is not None:
 
-        return Response(200)
+                if UserRegistry.objects.filter(user_id=user.user_id).exists():
+                    tt = Tenants.objects.create(
+                        app_user_id = UserRegistry.objects.get(user_id=user.user_id),
+                        reporting_owner = Landlord.objects.get(landlord_id=landlord_id),
+                        tenants_email = tenants_details['userEmail'],
+                        firstname = tenants_details['userFirstname'],
+                        lastname = tenants_details['userLastname'],
+                        contact_number = tenants_details['contactNumber'],
+                        nationality =  tenants_details['userNationality'],
+                        tenant_status = tenants_details['userStatus'],
+                        previous_address = tenants_details['previousAddress']
+                    )
+                    tt.save()
+                    
+                    if recieved_file:
+                        created_ten = Tenants.objects.get(tenant_id=tt.tenant_id)
+                        created_ten.docs = recieved_file
+                        created_ten.save()
+                    response_payload = {
+                        "message" : "Tenant added successfully"
+                    }
+                    return Response(response_payload, 201)
+        else:
+            response_payload = {
+                "message" : "Invalid request"
+            }
+            return Response(response_payload, 403)
     except:
         traceback.print_exc()
         response_payload = {
@@ -960,6 +1002,23 @@ def create_tenants(request):
         }
         return Response(response_payload, 500)
 
+@api_view(['GET'])
+def get_all_tenants(request):
+
+    try:
+        user_id = request.query_params['userId']
+
+        if Landlord.objects.filter(landlord_id=user_id).exists():
+
+            Tenants.objects.filter(reporting_owner=user_id).values()
+
+
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message"  : "server error"
+        }
+        return Response(response_payload, 500)
 
 
 
