@@ -975,6 +975,7 @@ def create_tenants(request):
                         tenants_email = tenants_details['userEmail'],
                         firstname = tenants_details['userFirstname'],
                         lastname = tenants_details['userLastname'],
+                        full_name = tenants_details['userFirstname'] + " " + tenants_details['userLastname'],
                         contact_number = tenants_details['contactNumber'],
                         nationality =  tenants_details['userNationality'],
                         tenant_status = tenants_details['userStatus'],
@@ -1021,13 +1022,121 @@ def get_all_tenants(request):
         return Response(response_payload, 500)
 
 
+@api_view(['GET'])
+def get_tenant_contract_form_details(request):
+
+    try:
+        user_id = request.query_params['userId']
+        tenants_data = Tenants.objects.filter(reporting_owner=user_id).exclude(firstname="default").values_list("tenant_id", "firstname", "lastname")[::1]
+        tenants_array = []
+        if len(tenants_data) > 0:
+            for t in tenants_data:
+                tenants_array.append({
+                    "tenantId" : t[0],
+                    "tenantName" : t[1] + " " + t[2]
+                }) 
+
+        properties_data = Property.objects.filter(owned_by=user_id).values_list("property_id", "property_name")[::1]
+        props_arr = []
+        if len(properties_data) > 0:
+            for p in properties_data:
+                props_arr.append({
+                    "propertyId" : p[0],
+                    "propertyName" : p[1]
+                })
+
+        response_payload = {
+            "message" : "fetched successfully",
+            "tenantsData" : tenants_array,
+            "propertiesData" : props_arr
+        }
+
+        return Response(response_payload, 200)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
 
 
+@api_view(['GET'])
+def get_property_units(request):
+
+    try:
+        user_id = request.query_params['userId']
+        property_id = request.query_params['propertyId']
+
+        units_arr = []
+        if Property.objects.filter(property_id=property_id).exists():
+            related_units = Units.objects.filter(unit_property=property_id).values_list("unit_id", "unit_name")[::1]
+            for unit in related_units:
+                units_arr.append({
+                    "unitId" : unit[0],
+                    "unitName" : unit[1]
+                })
+
+            response_payload = {
+                'message' : "fetched successfully",
+                "unitsData" : units_arr
+            }
+            return Response(response_payload, 200)
+
+        else:
+            response_payload = {
+                "message" : "Property not found",
+                "unitsData" : []
+            }
+            return Response(response_payload, 400)
+
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
 
 
+@api_view(['POST'])
+def create_tenancy_record(request):
 
+    try:
+        recieved_data = json.loads(request.data['data'])
+        print(recieved_data)
+        if request.data['contractDoc']:
+            recieved_file = request.data['contractDoc']
 
+        landlord_id = recieved_data['userId']
+        property_id = recieved_data['propertyId']
+        tenant_id = recieved_data['tenantId']
+        unit_id = recieved_data['unitId']
 
+        if Landlord.objects.filter(landlord_id = landlord_id).exists():
+
+            record = TenancyLease.objects.create(
+                property_id = Property.objects.get(property_id=property_id),
+                unit_id = Units.objects.get(unit_id=unit_id),
+                tenant_id = Tenants.objects.get(tenant_id=tenant_id),
+                monthly_rent = recieved_data['rent'],
+                tenancy_start_date = recieved_data['startDate'],
+                tenancy_end_date = recieved_data['endDate'],
+                tenancy_status = "active",
+            )
+            print(record.tenancy_id)
+
+            return Response(200)
+        else:
+            response_payload = {
+                "message" : "Invalid Request"
+            }
+            return Response(response_payload, 400)
+
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
 
 
 

@@ -63,26 +63,29 @@
 <div class="tenantPropertyAttachment">
   <div class="text-div">
   <h2>Create Tenancy Record</h2>
-  <p>Click on below button to assign tenants with property/units</p>
+  <p>Add details and submit to assign tenants with property/units</p>
   </div>
   <form class="row g-3">
   <div class="col-4">
     <label class="form-label">Tenant</label>
     <select class="form-select" v-model="selectedTenancyTenant">
       <option disabled value="">Choose</option>
+      <option v-for="tenant in tenantsOptions" :value="tenant.tenantId">{{ tenant.tenantName }}</option>
     </select>
   </div>
   <div class="col-4">
     <label class="form-label">Property</label>
-    <select class="form-select" v-model="selectedTenancyProperty">
+    <select class="form-select" v-model="selectedTenancyProperty" @change="populateUnits">
       <option disabled value="">Choose</option>
+      <option v-for="property in contractPropertiesOptions" :value="property.propertyId">{{ property.propertyName }}</option>
       <!-- <option></option> -->
     </select>
   </div>
   <div class="col-4">
     <label class="form-label">Unit</label>
     <select class="form-select" v-model="selectedTenancyUnit">
-      <option disabled value="">Choose</option>
+      <option v-for="unit in contractUnitsOptions" :value="unit.unitId">{{ unit.unitName }}</option>
+      <option v-if="contractUnitsOptions.length === 0" disabled value="">No units for selected property</option>
     </select>
   </div>
   <div class="col-4">
@@ -100,6 +103,9 @@
   <div class="col-md-4">
   <label for="formFile" class="form-label">Contract document</label>
   <input class="form-control" type="file" ref="contractfileupload" @change="handleContractDoc">
+  </div>
+  <div class="col-12">
+    <button type='button' class="btn btn-primary" v-on:click="addTenancyRecord" :style="{marginLeft : '550px', marginTop:'10px'}">Create</button>
   </div>
   </form>
   
@@ -136,6 +142,9 @@ export default {
             contractStartDate : '',
             contractEndDate : '',
             contractFileDoc : null,
+            tenantsOptions : [],
+            contractPropertiesOptions : [],
+            contractUnitsOptions : []
         }
     },
     methods:{
@@ -192,12 +201,127 @@ export default {
         handleContractDoc(e){
           this.contractFileDoc = e.target.files[0]
           let fileName = this.contractFileDoc.name
-          let fileSize = this.contractFileDoc.size
+          let fileSize = this.contractFileDoc.size/1000
+
+          let fileExt =  fileName.split('.')[fileName.split('.').length-1].toLowerCase();
+            if((fileExt) !== 'pdf'){
+              alert("please upload a pdf file, other type of file not accepted!")
+              this.$refs.contractfileupload.value = null;
+              this.contractFileDoc = null;
+            }
+            if(fileSize > 2048){
+              alert("please upload a file of size upto 2 MB only")
+              this.$refs.contractfileupload.value = null;
+              this.contractFileDoc = null;
+            }
+        },
+
+        populateTenantsProperties(){
+          let queryData = {
+            "userId" : localStorage.getItem('userId')
+          }
+
+          axios({
+            url : "http://localhost:8000/property/tenancy/data",
+            method : "GET",
+            params : queryData
+          }).then((response) => {
+            if(response.status === 200){
+              this.tenantsOptions = response.data.tenantsData;
+              this.contractPropertiesOptions = response.data.propertiesData
+            }
+              console.log(response)
+          }).catch((error) => {
+            console.log(error)
+          })
+        },
+
+        populateUnits(){
+          
+          if(this.selectedTenancyProperty === null || this.selectedTenancyProperty === ""){
+            alert("Please select the property!")
+            return
+          }
+          let queryData = {
+            "userId" : localStorage.getItem('userId'),
+            "propertyId" : this.selectedTenancyProperty
+          }
+
+          axios({
+            url : "http://localhost:8000/property/tenancy/units",
+            method : "GET",
+            params : queryData
+          }).then((response) => {
+              if(response.status === 200){
+                this.contractUnitsOptions = response.data.unitsData
+              }
+              console.log(response)
+          }).catch((error) => {
+            console.log(error)
+          })
+        },
+
+      addTenancyRecord(){
+
+        if(this.selectedTenancyTenant === null || this.selectedTenancyTenant === ''){
+          alert("Please select the tenant!!");
+          return;
         }
+        if(this.selectedTenancyProperty === null || this.selectedTenancyProperty === ''){
+          alert("Please select the Property!!");
+          return
+        }
+        if(this.selectedTenancyUnit === null || this.selectedTenancyUnit === ''){
+          alert("Please select the Unit!!");
+          return
+        }
+        
+        let tenancyStartDate = this.contractStartDate
+        let tenancyEndDate = this.contractEndDate
+        let currentDate = new Date()
+        if(new Date(tenancyStartDate).getTime() <= currentDate.getTime()){
+          alert("Please enter a valid Start Date");
+          return
+        }
+        if(new Date(tenancyEndDate).getTime() <= currentDate.getTime()){
+          alert("Please enter a valid End Date");
+          return
+        }
+
+        console.log(this.contractStartDate, this.contractEndDate)
+
+        let queryData = {
+          "userId" : localStorage.getItem("userId"),
+          "tenantId" : this.selectedTenancyTenant,
+          "propertyId" : this.selectedTenancyProperty,
+          "unitId" : this.selectedTenancyUnit,
+          "rent" : this.tenantRent,
+          "startDate" : this.contractStartDate,
+          "endDate" : this.contractEndDate,
+        }
+
+        const formData = new FormData()
+        formData.append('data', JSON.stringify(queryData))
+        formData.append('contractDoc', this.contractFileDoc)
+
+        axios({
+          url : "http://localhost:8000/property/tenancy-record/create",
+          method : 'POST',
+          data : formData,
+          headers : {'Content-type': 'multipart/form-data'}
+        }).then((response) => {
+          console.log(response)
+        }).catch((error) => {
+          alert(error.response.data.message)
+        })
+
+
+
+      }
 
     },
     mounted(){
-
+      this.populateTenantsProperties();
     }
     
 }

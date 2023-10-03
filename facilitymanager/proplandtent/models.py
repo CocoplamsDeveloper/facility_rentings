@@ -110,7 +110,7 @@ class TenancyLease(models.Model):
     lease_price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     tenancy_start_date = models.DateField()
     tenancy_end_date = models.DateField()
-    tenancy_agreement = models.FileField(upload_to='documents/tenancy_documents')
+    tenancy_agreement = models.FileField(upload_to='contract_documents')
     tenancy_status = models.CharField(max_length=150, default="inactive")
 
 
