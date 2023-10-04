@@ -1102,7 +1102,6 @@ def create_tenancy_record(request):
 
     try:
         recieved_data = json.loads(request.data['data'])
-        print(recieved_data)
         if request.data['contractDoc']:
             recieved_file = request.data['contractDoc']
 
@@ -1113,6 +1112,18 @@ def create_tenancy_record(request):
 
         if Landlord.objects.filter(landlord_id = landlord_id).exists():
 
+            if TenancyLease.objects.filter(unit_id=unit_id).exists():
+                response_payload = {
+                    "message" : "Unit already in existing contract!"
+                }
+                return Response(response_payload, 400)
+
+            if TenancyLease.objects.filter(tenant_id = tenant_id).exists():
+                response_payload = {
+                    "message" : "Tenant already in existing contract!"
+                }
+                return Response(response_payload, 400)
+                
             record = TenancyLease.objects.create(
                 property_id = Property.objects.get(property_id=property_id),
                 unit_id = Units.objects.get(unit_id=unit_id),
@@ -1122,9 +1133,18 @@ def create_tenancy_record(request):
                 tenancy_end_date = recieved_data['endDate'],
                 tenancy_status = "active",
             )
-            print(record.tenancy_id)
+            
+            if recieved_file:
+                tc = TenancyLease.objects.get(tenancy_id=record.tenancy_id)
+                tc.tenancy_agreement = recieved_file
+                tc.save()
 
-            return Response(200)
+            response_payload = {
+                "message" : "record created successfully",
+                "tenancyId" : record.tenancy_id
+            }
+
+            return Response(response_payload, 201)
         else:
             response_payload = {
                 "message" : "Invalid Request"
@@ -1139,6 +1159,45 @@ def create_tenancy_record(request):
         return Response(response_payload, 500)
 
 
+@api_view(['GET'])
+def get_tenants_data(request):
+
+    try:
+
+        user_id = request.query_params['userId']
+        tenants_with_tenancy = []
+        tenants_data = Tenants.objects.filter(reporting_owner=user_id).exclude(firstname="default").values()[::1]
+        for t in tenants_data:
+            tenant_rent = None
+            tenant_contract_start = None
+            tenant_contract_end = None
+            if TenancyLease.objects.filter(tenant_id=t['tenant_id']).exists():
+                tenancy = TenancyLease.objects.get(tenant_id=t['tenant_id'])
+                tenant_rent = tenancy.monthly_rent
+                tenant_contract_start = tenancy.tenancy_start_date
+                tenant_contract_end = tenancy.tenancy_end_date
+            tenants_with_tenancy.append({
+                "tenantId" : t['tenant_id'],
+                "tenantName" : t['full_name'],
+                "contactNumber" : t['contact_number'],
+                "tenantEmail" : t['tenants_email'],
+                "tenantRent" : tenant_rent,
+                "ContractStartDate" : tenant_contract_start,
+                "ContractEndDate" : tenant_contract_end,
+                "tenantStatus" : t['tenant_status']
+            })
+
+        response_payload = {
+            "message" : "fetched successfully",
+            "tenantsData" : tenants_with_tenancy
+        }
+        return Response(response_payload, 200)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
 
 
 

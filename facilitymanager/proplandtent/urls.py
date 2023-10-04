@@ -28,6 +28,7 @@ urlpatterns = [
     path('tenant/add', views.create_tenants),
     path('tenancy/data', views.get_tenant_contract_form_details),
     path('tenancy/units', views.get_property_units),
-    path('tenancy-record/create', views.create_tenancy_record)
+    path('tenancy-record/create', views.create_tenancy_record),
+    path('details/tenants', views.get_tenants_data)
 ]
 
