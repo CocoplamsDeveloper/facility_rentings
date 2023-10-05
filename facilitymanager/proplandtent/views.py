@@ -5,12 +5,14 @@ from django.core import serializers
 from .models import Landlord, Tenants, Property, TenancyLease, Units,UserRegistry, Role
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
+from datetime import datetime, date
 import pandas as pd
 import traceback
 import requests
 import os
 import csv
 import json
+
 
 #Global values
 available_roles = {
@@ -21,21 +23,7 @@ available_roles = {
 
 
 # logic functions 
-    
-
-
-# def save_uploaded_files(request, folder_name, file_name):
-#     try:
-#         if request.method == 'POST':
-#             uploaded_files = request.FILES['file']
-#             with open(f'media/documents/{folder_name}/{file_name}', 'wb+') as destination:
-#                 for chunk in uploaded_files.chunks():
-#                     destination.write(chunk)
-            
-#     except:
-#         traceback.print_exc()
-
-    
+        
     
 def generate_tenants(tenants_data, user_id, tenantFile):
 
@@ -127,7 +115,7 @@ def get_user(request, id):
 
 @api_view(['GET'])
 def get_landlord(request, id):
-
+    # api to fetch single landlord with id
     try:
         lid = id
         if Landlord.objects.filter(landlord_id = lid).exists():
@@ -156,7 +144,7 @@ def get_landlord(request, id):
 
 @api_view(['GET'])
 def get_tenant(request, id):
-
+    # api to fetch single tenant with id
     try:
         tid = id
         if Tenants.objects.filter(tenants_id = tid).exists():
@@ -188,7 +176,7 @@ def get_tenant(request, id):
 
 @api_view(['GET'])
 def get_property(request, id):
-
+    # api to fetch single property with id
     try:
         user_id = request.query_params['userId']
         pid = id
@@ -223,7 +211,7 @@ def get_property(request, id):
     
 @api_view(['GET'])
 def get_tenancy(request, id):
-
+    # api to fetch single tenancy record by id
     try:
         tenancy_id = id
         if TenancyLease.objects.filter(tenancy_id=tenancy_id).exists():
@@ -253,7 +241,7 @@ def get_tenancy(request, id):
 
 @api_view(['GET'])
 def get_units(request, id):
-
+    # api to fetch single unit with id
     try:
         unit_id = id
         if Units.objects.filter(unit_id=unit_id).exists():
@@ -283,7 +271,7 @@ def get_units(request, id):
 
 @api_view(['POST'])    
 def add_roles(request):
-
+    # api to add roles for users probably used by admin only
     try:
         data = request.data['roleName']
         adding = Role.objects.create(
@@ -304,7 +292,7 @@ def add_roles(request):
 
 @api_view(['POST'])
 def landlord_login(request):
-
+    # api for landlord login
     try:
         user_data = request.data
         email = user_data['userEmail']
@@ -350,7 +338,7 @@ def landlord_login(request):
 
 @api_view(['GET'])
 def landlord_logout(request):
-
+    # api to logout landlord user
     try:
         landlord_id = request.query_params['userId']
         if Landlord.objects.filter(landlord_id=landlord_id).exists():
@@ -377,7 +365,7 @@ def landlord_logout(request):
 
 @api_view(['POST'])  
 def create_users(request):
-
+    # api to use for admin for generating landlord and tenants
     try:
         users_data = request.data
         users_role = request.data['userRole']
@@ -434,7 +422,7 @@ def create_users(request):
 
 @api_view(['POST'])
 def create_properties(request):
-
+    # api to create property records in db 
     try:
         data = request.data
         property_data = data['data']
@@ -489,7 +477,7 @@ def create_properties(request):
 
 @api_view(['GET'])
 def landlord_property_list(request):
-
+    # api to get property details(id, name) for dropdowns purpose
     try:
         landlord_id = request.query_params['userId']
 
@@ -526,7 +514,7 @@ def landlord_property_list(request):
 
 @api_view(['GET'])
 def get_landlord_properties_data(request):
-
+    # api to get the landlord's properties
     try:
         landlord_id = request.query_params['userId']
 
@@ -563,7 +551,7 @@ def get_landlord_properties_data(request):
     
 @api_view(['POST'])
 def add_units(request):
-
+    # api to add units entered manually by users
     try:
         recieved_data = request.data
         landlord_id = recieved_data['userId']
@@ -613,7 +601,7 @@ def add_units(request):
 
 @api_view(['POST'])
 def get_units_from_csv(request):
-
+    # api to save units data into db from csv/excel file
     try:
         data = json.loads(request.data['data'])
         landlord_id = data['userId'],
@@ -686,10 +674,9 @@ def get_units_from_csv(request):
 
 @api_view(['POST'])
 def update_properties(request):
-
+    # api to update property data
     try:
         updation_data = request.data['data']
-        print(updation_data, "line 693")
         updation_data = json.loads(updation_data)
         landlord_id = updation_data['userId']
         property_id = updation_data['propertyId']
@@ -756,7 +743,7 @@ def update_properties(request):
 @api_view(['GET'])
 def get_landlord_all_units(request):
 
-
+    # api to get landlord all units
     try:
         user_id = request.query_params['userId']
         units_to_send = []
@@ -802,7 +789,7 @@ def get_landlord_all_units(request):
 
 @api_view(['POST'])
 def get_filtered_units(request):
-
+    # api for filtered units data 
     try:
         user_id = request.data['userId']
         f_type = None
@@ -819,25 +806,25 @@ def get_filtered_units(request):
 
         if f_type != None and f_status != None and f_property != None:
             filtered_data = Units.objects.filter(unit_type=f_type, unit_status=f_status, unit_property=f_property).values()
-            print("inside 1")
+
         elif f_type != None and f_status != None and f_property == None:
             filtered_data = Units.objects.filter(unit_type=f_type, unit_status=f_status).values()
-            print("inside 2")
+
         elif f_type != None and f_property != None and f_status == None:
             filtered_data = Units.objects.filter(unit_type=f_type, unit_property=f_property).values()
-            print("inside 3")
+
         elif f_status != None and f_property != None and f_type == None:
             filtered_data = Units.objects.filter(unit_status=f_status, unit_property=f_property).values()
-            print("inside 4")
+  
         elif f_type != None and f_status == None and f_property == None:
             filtered_data = Units.objects.filter(unit_type=f_type).values()
-            print("inside 5")
+ 
         elif f_type == None and f_property != None and f_status == None:
             filtered_data = Units.objects.filter(unit_property=f_property).values()
-            print("inside 6")
+
         elif f_status != None and f_property == None and f_type == None:
             filtered_data = Units.objects.filter(unit_status=f_status).values()
-            print("inside 7")
+
 
         filtered_arr = []
         for unit in filtered_data:
@@ -863,7 +850,7 @@ def get_filtered_units(request):
 
 @api_view(['POST'])
 def update_property_units(request):
-
+    #api for units updation
     try:
         user_id = request.data['userId']
         updation_data = request.data['updatedData']
@@ -903,7 +890,7 @@ def update_property_units(request):
 
 @api_view(['DELETE'])
 def delete_units(request):
-
+    # api for unit deletes
     try:
         print(request.data)
         user_id = request.data["userId"]
@@ -941,7 +928,7 @@ def delete_units(request):
 
 @api_view(['POST'])
 def create_tenants(request):
-
+    # api for tenant creation
     try:
         recieved_data = json.loads(request.data['data'])
         landlord_id = recieved_data['userId']
@@ -1003,28 +990,10 @@ def create_tenants(request):
         }
         return Response(response_payload, 500)
 
-@api_view(['GET'])
-def get_all_tenants(request):
-
-    try:
-        user_id = request.query_params['userId']
-
-        if Landlord.objects.filter(landlord_id=user_id).exists():
-
-            Tenants.objects.filter(reporting_owner=user_id).values()
-
-
-    except:
-        traceback.print_exc()
-        response_payload = {
-            "message"  : "server error"
-        }
-        return Response(response_payload, 500)
-
 
 @api_view(['GET'])
 def get_tenant_contract_form_details(request):
-
+    # api for tenants and properties dropdowns(consists of name and ID for both)
     try:
         user_id = request.query_params['userId']
         tenants_data = Tenants.objects.filter(reporting_owner=user_id).exclude(firstname="default").values_list("tenant_id", "firstname", "lastname")[::1]
@@ -1062,7 +1031,8 @@ def get_tenant_contract_form_details(request):
 
 @api_view(['GET'])
 def get_property_units(request):
-
+    
+    #api for units id and name(for dropdowns or refernce)
     try:
         user_id = request.query_params['userId']
         property_id = request.query_params['propertyId']
@@ -1099,7 +1069,7 @@ def get_property_units(request):
 
 @api_view(['POST'])
 def create_tenancy_record(request):
-
+    # api for tenancy record creation
     try:
         recieved_data = json.loads(request.data['data'])
         if request.data['contractDoc']:
@@ -1133,8 +1103,13 @@ def create_tenancy_record(request):
                 tenancy_end_date = recieved_data['endDate'],
                 tenancy_status = "active",
             )
+            if record: 
+                Units.objects.filter(unit_id=unit_id).update(unit_occupied_by=tenant_id, unit_status="occupied")
+                prop = Property.objects.get(property_id=property_id)
+                prop.tenants.add(Tenants.objects.get(tenant_id=tenant_id))
+                Tenants.objects.filter(tenant_id=tenant_id).update(tenant_rent=recieved_data['rent'])
             
-            if recieved_file:
+            if recieved_file and record:
                 tc = TenancyLease.objects.get(tenancy_id=record.tenancy_id)
                 tc.tenancy_agreement = recieved_file
                 tc.save()
@@ -1161,18 +1136,20 @@ def create_tenancy_record(request):
 
 @api_view(['GET'])
 def get_tenants_data(request):
-
+    # api for all tenants with tenancy
     try:
 
         user_id = request.query_params['userId']
         tenants_with_tenancy = []
         tenants_data = Tenants.objects.filter(reporting_owner=user_id).exclude(firstname="default").values()[::1]
         for t in tenants_data:
+            contract_id = None
             tenant_rent = None
             tenant_contract_start = None
             tenant_contract_end = None
             if TenancyLease.objects.filter(tenant_id=t['tenant_id']).exists():
                 tenancy = TenancyLease.objects.get(tenant_id=t['tenant_id'])
+                contract_id = tenancy.tenancy_id
                 tenant_rent = tenancy.monthly_rent
                 tenant_contract_start = tenancy.tenancy_start_date
                 tenant_contract_end = tenancy.tenancy_end_date
@@ -1184,7 +1161,8 @@ def get_tenants_data(request):
                 "tenantRent" : tenant_rent,
                 "ContractStartDate" : tenant_contract_start,
                 "ContractEndDate" : tenant_contract_end,
-                "tenantStatus" : t['tenant_status']
+                "tenantStatus" : t['tenant_status'],
+                "tenancyContractId" : contract_id
             })
 
         response_payload = {
@@ -1200,17 +1178,162 @@ def get_tenants_data(request):
         return Response(response_payload, 500)
 
 
+@api_view(['POST'])
+def update_tenants_details(request):
+    # api to update tenants data without documents
+    try:
+        recieved_data = request.data
+        user_id = recieved_data['userId']
+        tenant_id = recieved_data['tenantId']
+        if Tenants.objects.filter(tenant_id=tenant_id).exists():
+
+            updation = Tenants.objects.filter(tenant_id=tenant_id).update(
+                firstname=recieved_data['tenantFirstName'],
+                lastname = recieved_data['tenantLastName'],
+                tenants_email = recieved_data['tenantEmail'],
+                contact_number = recieved_data['tenantContactNumber'],
+                tenant_status = recieved_data['tenantStatus'],
+                tenant_rent = recieved_data['tenantRent']
+            )
+            if updation:
+                response_payload = {
+                    "message" : "Tenants details updated",
+                    "tenantId" : tenant_id
+                }
+                return Response(response_payload, 200)
+
+        else:
+            response_payload = {
+                "message" : "Tenant not found",
+                    "tenantId" : tenant_id
+            }
+            return Response(response_payload, 400)
+        return Response(200)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" :  "server error"
+        }
+        return Response(response_payload, 500)
+
+@api_view(['GET'])
+def get_tenants_documents(request):
+    #api to fetch tenant document and tenancy contract document
+    try:
+        landlord_id = request.query_params['userId']
+        tenants = Tenants.objects.filter(reporting_owner=landlord_id).exclude(firstname="default").values_list('tenant_id','docs')[::1]
+        documents_urls = []
+        for t in tenants:
+            tenancy_id = None
+            tenancy_doc = None
+            if TenancyLease.objects.filter(tenant_id=t[0]).exists():
+                tl = TenancyLease.objects.get(tenant_id=t[0])
+                tenancy_id = tl.tenancy_id
+                tenancy_doc = str(tl.tenancy_agreement)
+            documents_urls.append({
+                "tenantId" : t[0],
+                "tenantDocument" : str(t[1]),
+                "tenancyId" : tenancy_id,
+                "tenancyDocument" : tenancy_doc
+            })
+
+        response_payload = {
+            "message" : "fetched successfully",
+            "documentsData" : documents_urls
+        }
+        return Response(response_payload, 200)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
 
 
+@api_view(['POST'])
+def update_tenants_related_documents(request):
 
+    try:
+        recieved_data = request.data
+        landlord_id = recieved_data['userId']
+        tenant_id = recieved_data['tenantId']
+        tenancy_id = recieved_data['tenancyId']
+        updated_tenant_doc = None
+        updated_tenancy_doc = None
+        if 'updatedTenantDoc' in request.data.keys():
+            updated_tenant_doc = request.data['updatedTenantDoc']
+        if 'updatedTenancyDoc' in request.data.keys():
+            updated_tenancy_doc = request.data['updatedTenancyDoc']
+        
+        if updated_tenant_doc is not None:
+            if Tenants.objects.filter(tenant_id=tenant_id).exists():
+                t_obj = Tenants.objects.get(tenant_id=tenant_id)
 
+                if os.path.exists(str(t_obj.docs)):
+                    os.remove(str(t_obj.docs))
+                t_obj.docs = updated_tenant_doc
+                t_obj.save()
 
+        if updated_tenancy_doc is not None:
+            if TenancyLease.objects.filter(tenancy_id=tenancy_id).exists():
+                tl_obj = TenancyLease.objects.get(tenancy_id=tenancy_id)
+                if os.path.exists(str(tl_obj.tenancy_agreement)):
+                    os.remove(str(tl_obj.tenancy_agreement))
+                tl_obj.tenancy_agreement = updated_tenancy_doc
+                tl_obj.save()
+        
+        response_payload = {
+            "message" : "documents updated successfully",
+            "tenantId" : tenant_id,
+            "tenancyId" : tenancy_id
+        }
+        return Response(response_payload, 200)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
 
+@api_view(['PUT'])
+def update_tenancy_status(request):
 
+    try:
+        landlord_id = request.query_params['userId']
+        tenancy_id = request.query_params['tenancyId']
 
+        if TenancyLease.objects.filter(tenancy_id=tenancy_id).exists():
 
+            tl = TenancyLease.objects.get(tenancy_id=tenancy_id)
+            contract_end = tl.tenancy_end_date
 
+            crnt_date = date.today()
+            if crnt_date > contract_end:
+                tl.tenancy_status = "inactive"
+                tl.save()
 
+                response_payload = {
+                    "message" : "contract expired",
+                    "tenancyId" : tl.tenancy_id
+                }
+                return Response(response_payload, 200)
+            else:
+                response_payload = {
+                    "message" : "contract valid",
+                    "tenancyId" : tl.tenancy_id
+                }
+                return Response(response_payload, 200)
+        else:
+            response_payload = {
+                "message" : "record not found",
+            }
+            return Response(response_payload, 400)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
 
 
 

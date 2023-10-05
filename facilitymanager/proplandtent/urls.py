@@ -29,6 +29,10 @@ urlpatterns = [
     path('tenancy/data', views.get_tenant_contract_form_details),
     path('tenancy/units', views.get_property_units),
     path('tenancy-record/create', views.create_tenancy_record),
-    path('details/tenants', views.get_tenants_data)
+    path('details/tenants', views.get_tenants_data),
+    path('tenants/update', views.update_tenants_details),
+    path('tenant-docs/get', views.get_tenants_documents),
+    path('tenant-docs/update', views.update_tenants_related_documents),
+    path('contract-status/update', views.update_tenancy_status)
 ]
 
