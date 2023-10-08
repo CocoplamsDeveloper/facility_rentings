@@ -113,7 +113,15 @@ class TenancyLease(models.Model):
     tenancy_agreement = models.FileField(upload_to='contract_documents')
     tenancy_status = models.CharField(max_length=150, default="inactive")
 
+class RefreshTokenRegistry(models.Model):
 
-
+    token = models.CharField()
+    user = models.ForeignKey(UserRegistry, on_delete=models.CASCADE)
+    created_on = models.DateTimeField()
+    updated_on = models.DateTimeField()
+    expire_time = models.DateTimeField()
+    role = models.CharField()
+    scope = models.CharField()
+    status = models.CharField()
 
 

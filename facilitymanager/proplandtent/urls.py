@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from . import views
+from . import views, oauth2
 # from graphene_django.views import GraphQLView
 
 urlpatterns = [
@@ -33,6 +33,7 @@ urlpatterns = [
     path('tenants/update', views.update_tenants_details),
     path('tenant-docs/get', views.get_tenants_documents),
     path('tenant-docs/update', views.update_tenants_related_documents),
-    path('contract-status/update', views.update_tenancy_status)
+    path('contract-status/update', views.update_tenancy_status),
+    # path('token/get', oauth2.testing_tokens)
 ]
 
