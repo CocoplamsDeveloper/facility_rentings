@@ -61,6 +61,7 @@ export default {
             url:'http://localhost:8000/property/landlord-prop/get',
             params: queryData,
             method:"GET",
+            withCredentials : true
           }).then((response) => {
             if (response.status === 200){
               console.log(response)

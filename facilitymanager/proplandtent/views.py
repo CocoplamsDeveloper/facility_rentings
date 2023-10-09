@@ -5,6 +5,8 @@ from django.core import serializers
 from .models import Landlord, Tenants, Property, TenancyLease, Units,UserRegistry, Role
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
+from .decorators import is_authorized, is_admin, is_landlord, is_tenant
+from .oauth2 import create_tokens
 from datetime import datetime, date
 import pandas as pd
 import traceback
@@ -20,7 +22,7 @@ available_roles = {
     "landlord" : 2,
     "tenant" : 3
 }
-
+cookie_max_age = 3600*24*7
 
 # logic functions 
         
@@ -479,6 +481,9 @@ def create_properties(request):
 def landlord_property_list(request):
     # api to get property details(id, name) for dropdowns purpose
     try:
+        # print("line 448", request.META['HTTP_AUTHORIZATION'])
+        print("line 485", request.COOKIES.get('access_token'))
+        print("line 485", request.COOKIES.get('refresh_token'))
         landlord_id = request.query_params['userId']
 
         properties = Property.objects.filter(owned_by=landlord_id).values_list('property_id', 'property_name', 'property_type')[::1]
@@ -1335,10 +1340,68 @@ def update_tenancy_status(request):
         }
         return Response(response_payload, 500)
 
+@api_view(['POST'])
+def user_login(request):
+
+    try:
+        user_data = request.data
+        email = user_data['userEmail']
+        password = user_data['userPassword']
+
+        if UserRegistry.objects.filter(user_email=email).exists():
+
+            user = UserRegistry.objects.get(user_email=email)
+            pass_ = user.user_password
+
+            if password == pass_:
+                status, tokens = create_tokens(user.user_id)
+
+                _data = {
+                    "accessToken" : tokens['access_token'],
+                    "refreshTokenId" : tokens['refresh_token_id'],
+                    "userId" : user.user_id,
+                    "userRole" : user.user_role.role_name,
+                    "userName" : user.user_fullname
+                }
 
 
+                response_payload = {
+                    "message" : "Logged In",
+                    "userData" : _data
+                }
 
+                response = Response(response_payload, 200)
+                response.set_cookie(
+                    "access_token", 
+                    tokens['access_token'],
+                    max_age=cookie_max_age,
+                    httponly =True
+                )
 
+                response.set_cookie(
+                    "refresh_token", 
+                    tokens['refresh_token'],
+                    max_age=cookie_max_age,
+                    httponly =True
+                )
+                return response
+            else:
+                response_payload = {
+                    "message" : "User Password Incorrect",
+                }
+                return Response(response_payload, 401)
+        else:
+            response_payload = {
+                "message" : "User Not found",
+            }
+            return Response(response_payload, 401)
+
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "Server Error"
+        }
+        return Response(response_payload, 500)
 
 
 

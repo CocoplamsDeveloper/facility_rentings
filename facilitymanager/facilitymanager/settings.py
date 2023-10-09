@@ -130,7 +130,7 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -146,3 +146,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+CORS_ALLOW_CREDENTIALS = True
+
+# AUTH_ACCESS_COOKIE = 'access_token'  # Cookie name. Enables cookies if value is set.
+# AUTH_REFRESH_COOKIE = 'refresh_token'
+# AUTH_COOKIE_DOMAIN = None     # A string like "example.com", or None for standard domain cookie.
+# AUTH_COOKIE_SECURE = False     # Whether the auth cookies should be secure (https:// only).
+# AUTH_COOKIE_HTTP_ONLY = True  # Http only cookie flag.It's not fetch by javascript.
+# AUTH_COOKIE_PATH = '/'        # The path of the auth cookie.
+# AUTH_COOKIE_SAMESITE = 'Lax'  # Whether to set the flag restricting cookie leaks on cross-site requests.
+#                               # This can be 'Lax', 'Strict', or None to disable the flag.

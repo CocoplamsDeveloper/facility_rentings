@@ -46,14 +46,14 @@ export default {
             userPassword : this.ldPassword,
         }
         axios({
-            url: "http://127.0.0.1:8000/property/ld-login",
+            url: "http://127.0.0.1:8000/property/user/login",
             method : "post",
             data: data
             }).then((response)=>{
             console.log(response)
             if(response.status === 200){
                 alert(response.data.message)
-                localStorage.setItem("userId", response.data.user_id)
+                localStorage.setItem("userId", response.data.userId)
                 this.$router.push({name:"Dashboard"})
             }
             
