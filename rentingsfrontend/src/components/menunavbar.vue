@@ -84,16 +84,26 @@ export default {
     methods:{
       landlordLogout(){
         let data = {
-          userId : localStorage.getItem("userId")
+          userId : sessionStorage.getItem("userId")
+        }
+        if(!sessionStorage.getItem("accessToken")){
+          this.$router.push('/login');
+          return 
         }
 
         axios({
           url: "http://127.0.0.1:8000/property/ld-logout",
           method : "get",
-          params : data
+          params : data,
+          headers :{
+            'Authorization' : sessionStorage.getItem("accessToken")
+          }
         }).then((response) => {
           if (response.status === 200){
-            localStorage.removeItem("userId");
+            sessionStorage.removeItem("userId");
+            sessionStorage.removeItem("accessToken");
+            sessionStorage.removeItem("tokenId")
+            sessionStorage.removeItem("role")
             this.$router.push('/login');
           }
       }).catch((error) => {

@@ -3,6 +3,7 @@ from .models import RefreshTokenRegistry, UserRegistry, Landlord, Tenants, Role
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from facilitymanager.settings import SECRET_KEY, ACCESS_TOKEN_LIFETIME, REFRESH_TOKEN_LIFETIME, ALGORITHM
+from rest_framework.authentication import CSRFCheck
 import jwt
 from datetime import datetime, timedelta
 import json
@@ -10,6 +11,21 @@ import base64
 import os
 import traceback
 import requests
+from rest_framework import exceptions
+from django.conf import settings
+
+
+# def enforce_csrf(request):
+#     """
+#     Enforce CSRF validation.
+#     """
+#     check = CSRFCheck()
+#     # populates request.META['CSRF_COOKIE'], which is used in process_view()
+#     check.process_request(request)
+#     reason = check.process_view(request, None, (), {})
+#     if reason:
+#         # CSRF failed, bail with explicit error message
+#         raise exceptions.PermissionDenied('CSRF Failed: %s' % reason)
 
 
 def is_authorized(func):
@@ -19,7 +35,9 @@ def is_authorized(func):
 
         try:
             enc_token = request.META['HTTP_AUTHORIZATION']
-
+            # print(request.COOKIES)
+            # enc_token = request.COOKIES.get(settings.SIMPLE_JWT["AUTH_ACCESS_COOKIE"]) or None
+            # enforce_csrf(request)
             if enc_token == "" or enc_token == None:
                 return Response({"message" : "Not Authorized"}, 401)
             enc_token = str.replace(str(enc_token), 'Bearer ', '')

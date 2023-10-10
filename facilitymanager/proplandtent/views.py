@@ -3,10 +3,13 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.core import serializers
 from .models import Landlord, Tenants, Property, TenancyLease, Units,UserRegistry, Role
+from django.middleware import csrf
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
 from .decorators import is_authorized, is_admin, is_landlord, is_tenant
 from .oauth2 import create_tokens
+from django.conf import settings
+from facilitymanager.settings import ACCESS_TOKEN_LIFETIME, ALGORITHM, REFRESH_TOKEN_LIFETIME
 from datetime import datetime, date
 import pandas as pd
 import traceback
@@ -478,12 +481,11 @@ def create_properties(request):
 
 
 @api_view(['GET'])
+@is_authorized
 def landlord_property_list(request):
     # api to get property details(id, name) for dropdowns purpose
     try:
-        # print("line 448", request.META['HTTP_AUTHORIZATION'])
-        print("line 485", request.COOKIES.get('access_token'))
-        print("line 485", request.COOKIES.get('refresh_token'))
+
         landlord_id = request.query_params['userId']
 
         properties = Property.objects.filter(owned_by=landlord_id).values_list('property_id', 'property_name', 'property_type')[::1]
@@ -1370,20 +1372,17 @@ def user_login(request):
                     "userData" : _data
                 }
 
-                response = Response(response_payload, 200)
-                response.set_cookie(
-                    "access_token", 
-                    tokens['access_token'],
-                    max_age=cookie_max_age,
-                    httponly =True
-                )
 
-                response.set_cookie(
-                    "refresh_token", 
-                    tokens['refresh_token'],
-                    max_age=cookie_max_age,
-                    httponly =True
-                )
+                response = Response(response_payload, 200)
+
+                # response.set_cookie(
+                #     key="access_token",
+                #     value=tokens['access_token'],
+                #     httponly=True,
+                #     samesite='Lax',
+                #     secure=False
+                # )
+                # csrf.get_token(request)
                 return response
             else:
                 response_payload = {

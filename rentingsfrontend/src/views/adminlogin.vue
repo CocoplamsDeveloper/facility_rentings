@@ -48,12 +48,19 @@ export default {
         axios({
             url: "http://127.0.0.1:8000/property/user/login",
             method : "post",
-            data: data
+            data: data,
+            headers : {
+            "Content-Type": "application/json"
+            },
             }).then((response)=>{
             console.log(response)
             if(response.status === 200){
+                let data = response.data.userData
                 alert(response.data.message)
-                localStorage.setItem("userId", response.data.userId)
+                sessionStorage.setItem("userId", data.userId)
+                sessionStorage.setItem("accessToken", data.accessToken)
+                sessionStorage.setItem("tokenId", data.refreshTokenId)
+                sessionStorage.setItem("role", data.userRole)
                 this.$router.push({name:"Dashboard"})
             }
             

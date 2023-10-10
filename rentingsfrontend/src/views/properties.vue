@@ -54,14 +54,20 @@ export default {
 
         getUserProperties(){
             let queryData =  {
-            "userId" : localStorage.getItem('userId')
+            "userId" : sessionStorage.getItem('userId')
+          }
+          if(!sessionStorage.getItem("accessToken")){
+            this.$router.push('/login');
+            return 
           }
 
           axios({
             url:'http://localhost:8000/property/landlord-prop/get',
             params: queryData,
             method:"GET",
-            withCredentials : true
+            headers : {
+                "Authorization" : sessionStorage.getItem("accessToken")
+            }
           }).then((response) => {
             if (response.status === 200){
               console.log(response)

@@ -23,7 +23,7 @@ from django.conf import settings
 
 
 urlpatterns = [
-    # path('admin/', admin.site.urls),
+    path('admin/', admin.site.urls),
     path('property/', include('proplandtent.urls')),
     # path("graphql", GraphQLView.as_view(graphiql=True)),
 
