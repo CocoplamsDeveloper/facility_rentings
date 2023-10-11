@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.core import serializers
-from .models import Landlord, Tenants, Property, TenancyLease, Units,UserRegistry, Role
+from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry
 from django.middleware import csrf
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
@@ -35,11 +35,11 @@ def generate_tenants(tenants_data, user_id, tenantFile):
     try:
         tenant = tenants_data
         tenant_file = tenantFile
-        if Tenants.objects.filter(tenant_email=tenant['userEmail']).exists():
+        if UserRegistry.objects.filter(tenant_email=tenant['userEmail']).exists():
             return "tenant account exists"
         else:
             if UserRegistry.objects.filter(user_id=user_id).exists():
-                tt = Tenants.objects.create(
+                tt = UserRegistry.objects.create(
                     app_user_id = UserRegistry.objects.get(user_id=user_id),
                     landlord_email = tenant['userEmail'],
                     firstname = tenant['userFirstname'],
@@ -63,11 +63,11 @@ def generate_landlord(user_data, user_id):
 
     try:
         landlord = user_data
-        if Landlord.objects.filter(landlord_email=landlord['userEmail']).exists():
+        if UserRegistry.objects.filter(landlord_email=landlord['userEmail']).exists():
             return "landlord account exists"
         else:
             if UserRegistry.objects.filter(user_id=user_id).exists():
-                ld = Landlord.objects.create(
+                ld = UserRegistry.objects.create(
                     app_user_id = UserRegistry.objects.get(user_id=user_id),
                     landlord_email = landlord['userEmail'],
                     firstname = landlord['userFirstname'],
@@ -94,7 +94,7 @@ def get_user(request, id):
     try:
         uid = id
         if UserRegistry.objects.filter(user_id = uid).exists():
-            users_data = Landlord.objects.filter(user_id=uid)
+            users_data = UserRegistry.objects.filter(user_id=uid)
             users_data = json.loads(serializers.serialize('json', users_data))
 
 
@@ -103,12 +103,13 @@ def get_user(request, id):
                 return Response(response_payload, 400)
 
             response_payload = {
-                'landlord_record' : users_data
+                "message" : "fetched successfully",
+                'user_record' : users_data
             }
             return Response(response_payload, 200)
         else:
             response_payload = {
-                'message' : 'landlord does not exist'
+                'message' : 'user does not exist'
             }
             return Response(response_payload, 404)
     except:
@@ -118,65 +119,65 @@ def get_user(request, id):
 
 
 
-@api_view(['GET'])
-def get_landlord(request, id):
-    # api to fetch single landlord with id
-    try:
-        lid = id
-        if Landlord.objects.filter(landlord_id = lid).exists():
-            ld_data = Landlord.objects.filter(landlord_id=lid)
-            ld_data = json.loads(serializers.serialize('json', ld_data))
+# @api_view(['GET'])
+# def get_landlord(request, id):
+#     # api to fetch single landlord with id
+#     try:
+#         user_id = id
+#         if UserRegistry.objects.filter(user_id = user_id).exists():
+#             ld_data = UserRegistry.objects.filter(user_role = 2)
+#             ld_data = json.loads(serializers.serialize('json', ld_data))
 
 
-            if len(ld_data) > 1:
-                response_payload = {"message": "Multiple landlords with same ID"}
-                return Response(response_payload, 400)
+#             if len(ld_data) > 1:
+#                 response_payload = {"message": "Multiple landlords with same ID"}
+#                 return Response(response_payload, 400)
 
-            response_payload = {
-                'landlord_record' : ld_data
-            }
-            return Response(response_payload, 200)
-        else:
-            response_payload = {
-                'message' : 'landlord does not exist'
-            }
-            return Response(response_payload, 404)
-    except:
-        traceback.print_exc()
-        response_payload = {"message" : "server error"}
-        return Response(response_payload, 500)
-
-
-@api_view(['GET'])
-def get_tenant(request, id):
-    # api to fetch single tenant with id
-    try:
-        tid = id
-        if Tenants.objects.filter(tenants_id = tid).exists():
-            tenant_data = Tenants.objects.filter(tenants_id=tid)
-            tenant_data = json.loads(serializers.serialize('json', tenant_data))
+#             response_payload = {
+#                 'landlord_record' : ld_data
+#             }
+#             return Response(response_payload, 200)
+#         else:
+#             response_payload = {
+#                 'message' : 'landlord does not exist'
+#             }
+#             return Response(response_payload, 404)
+#     except:
+#         traceback.print_exc()
+#         response_payload = {"message" : "server error"}
+#         return Response(response_payload, 500)
 
 
-            if len(tenant_data) > 1:
-                response_payload = {"message": "Multiple tenants with same ID"}
-                return Response(response_payload, 400)
+# @api_view(['GET'])
+# def get_tenant(request, id):
+#     # api to fetch single tenant with id
+#     try:
+#         tid = id
+#         if UserRegistry.objects.filter(tenants_id = tid).exists():
+#             tenant_data = UserRegistry.objects.filter(tenants_id=tid)
+#             tenant_data = json.loads(serializers.serialize('json', tenant_data))
 
-            response_payload = {
-                "tenant_record" : tenant_data
-            }
 
-            return Response(response_payload, 200)
-        else:
-            response_payload = {
-                "message" : "tenant not found"
-            }
-            return Response(response_payload, 404)
-    except:
-        traceback.print_exc()
-        response_payload = {
-            "message" : "server error"
-        }
-        return Response(response_payload, 500)
+#             if len(tenant_data) > 1:
+#                 response_payload = {"message": "Multiple tenants with same ID"}
+#                 return Response(response_payload, 400)
+
+#             response_payload = {
+#                 "tenant_record" : tenant_data
+#             }
+
+#             return Response(response_payload, 200)
+#         else:
+#             response_payload = {
+#                 "message" : "tenant not found"
+#             }
+#             return Response(response_payload, 404)
+#     except:
+#         traceback.print_exc()
+#         response_payload = {
+#             "message" : "server error"
+#         }
+#         return Response(response_payload, 500)
 
 
 @api_view(['GET'])
@@ -185,7 +186,7 @@ def get_property(request, id):
     try:
         user_id = request.query_params['userId']
         pid = id
-        if Landlord.objects.filter(landlord_id=user_id).exists():
+        if UserRegistry.objects.filter(landlord_id=user_id).exists():
             if Property.objects.filter(property_id=pid).exists():
                 property_data = Property.objects.filter(property_id=pid)
                 property_data = json.loads(serializers.serialize('json', property_data))
@@ -228,6 +229,7 @@ def get_tenancy(request, id):
                 return Response(response_payload, 400)
 
             response_payload = {
+                "message" : "fetched successfully",
                 "tenancy_data" : tenancy_data
             }
             return Response(response_payload, 200)
@@ -295,64 +297,27 @@ def add_roles(request):
         return Response(response_payload, 500)
     
 
-@api_view(['POST'])
-def landlord_login(request):
-    # api for landlord login
-    try:
-        user_data = request.data
-        email = user_data['userEmail']
-        password = user_data['userPassword']
-
-        if UserRegistry.objects.filter(user_email=email).exists():
-
-            if Landlord.objects.filter(landlord_email=email).exists():
-                ld_data = Landlord.objects.get(landlord_email=email)
-
-                if password == ld_data.landlord_password:
-                    Landlord.objects.filter(landlord_email=email).update(landlord_status="loggedin")
-
-                    response_payload = {
-                        'message' : "Logged In Successfully",
-                        'user_id' : ld_data.landlord_id,
-                        'user_first_name' : ld_data.firstname, 
-                        'user_last_name' : ld_data.lastname,
-                        'user_status' : ld_data.landlord_status
-                    }        
-
-                    return Response(response_payload, 200)
-
-            else:
-                response_payload = {
-                    'message' : 'User does not exists'
-                }
-                return Response(response_payload, 401)
-            
-        else:
-            response_payload = {
-                'message' : 'Invalid User'
-            }
-            return Response(response_payload, 401)
-
-    except:
-        traceback.print_exc()
-        response_payload = {
-        "message" : "server error"
-        }
-        return Response(response_payload, 500)
-
 
 @api_view(['GET'])
-def landlord_logout(request):
+@is_authorized
+def user_logout(request):
     # api to logout landlord user
     try:
-        landlord_id = request.query_params['userId']
-        if Landlord.objects.filter(landlord_id=landlord_id).exists():
-            Landlord.objects.filter(landlord_id=landlord_id).update(landlord_status = "loggedout")
+        user_id = request.query_params['userId']
+        if 'tokenId' in request.query_params.keys():
+            token_id = request.query_params['tokenId']
+        if UserRegistry.objects.filter(user_id=user_id).exists():
+            UserRegistry.objects.filter(user_id=user_id).update(user_status = "loggedout")
 
+            if RefreshTokenRegistry.objects.filter(id=token_id).exists():
+                RefreshTokenRegistry.objects.filter(id=token_id).update(
+                    status = "invalid",
+                    updated_on = datetime.utcnow()
+                )
             response_payload = {
                 'message' : "Loggedout successfully",
-                'landlord_id' : landlord_id,
-                'status'  : Landlord.objects.get(landlord_id=landlord_id).landlord_status
+                'user_id' : user_id,
+                'status'  : "loggedout"
             }
             return Response(response_payload, 200)
         else:
@@ -376,7 +341,7 @@ def create_users(request):
         users_role = request.data['userRole']
         if UserRegistry.objects.filter(user_email=users_data['userEmail']).exists():
             response_payload = {
-                'message' : "user already exists",
+                'message' : "user already exists"
             }
             return Response(response_payload, 400)
         else:
@@ -384,39 +349,15 @@ def create_users(request):
             user = UserRegistry.objects.create(
                 user_firstname = users_data['userFirstname'],
                 user_lastname = users_data['userLastname'],
+                user_fullname = users_data['userFirstname'] + " " + users_data['userLastname'],
                 user_contact_number = users_data['contactNumber'],
                 user_email = users_data['userEmail'],
                 user_nationality = users_data['userNationality'],
                 user_role = Role.objects.get(role_id=role_id),
             )
             user.save()
-            if users_role == "landlord":
-                creation, landlord_id = generate_landlord(users_data, user.user_id)
-                print("landlord id", landlord_id)
-                response_payload = {
-                    'message' : "landlord created successfully",
-                    'landlordId' : landlord_id
-                }
-                return Response(response_payload, 201)
-            # if users_role == "tenant":
-            #     creation, tenant_id = generate_tenants(users_data, user.user_id)
-            #     print("tenant id", tenant_id)
-            #     response_payload = {
-            #         'message' : "tenant created successfully",
-            #         'tenantId' : tenant_id
-            #     }
-            #     return Response(response_payload, 201)
-            if creation:
 
-                response_payload = {
-                    'message' : "user created successfully",
-                }
-                return Response(response_payload)
-            else:
-                response_payload = {
-                    'message' : creation
-                }
-                return Response(response_payload)
+
     except:
         traceback.print_exc()
         response_payload = {
@@ -440,11 +381,11 @@ def create_properties(request):
             property_buyvalue = float(property_data["propertyBuyValue"])
 
         landlord_id = property_data['userId']
-        if Landlord.objects.filter(landlord_id=landlord_id).exists():
+        if UserRegistry.objects.filter(landlord_id=landlord_id).exists():
             Property.objects.create(
                 property_name = property_data['propertyName'],
                 property_type = property_data['propertyType'],
-                owned_by = Landlord.objects.get(landlord_id=landlord_id),
+                owned_by = UserRegistry.objects.get(landlord_id=landlord_id),
                 governate = property_data['governateName'],
                 Street=property_data['propertyStreet'],
                 City=property_data['propertyCity'],
@@ -459,10 +400,10 @@ def create_properties(request):
                 selling_price = property_salevalue,
                 buying_price = property_buyvalue
             )
-            Nos_of_props = Landlord.objects.get(landlord_id=landlord_id).properties_owned
+            Nos_of_props = UserRegistry.objects.get(landlord_id=landlord_id).properties_owned
             print(Nos_of_props)
             Nos_of_props += 1
-            Landlord.objects.filter(landlord_id=landlord_id).update(properties_owned=Nos_of_props)
+            UserRegistry.objects.filter(landlord_id=landlord_id).update(properties_owned=Nos_of_props)
             response_payload = {
                 "message" : "success" 
             }
@@ -525,7 +466,7 @@ def get_landlord_properties_data(request):
     try:
         landlord_id = request.query_params['userId']
 
-        if Landlord.objects.filter(landlord_id = landlord_id).exists():
+        if UserRegistry.objects.filter(landlord_id = landlord_id).exists():
 
             properties_data = Property.objects.filter(owned_by=landlord_id)
             properties_data = serializers.serialize('json', properties_data)
@@ -583,7 +524,7 @@ def add_units(request):
                         unit_bathrooms_nos = int(unit_baths),
                         area_insqmts = unit['Unit Size'],
                         unit_status = unit['Status'],
-                        unit_occupied_by= Tenants.objects.get(tenant_id=2)
+                        unit_occupied_by= UserRegistry.objects.get(tenant_id=2)
                     )
 
                 response_payload = {
@@ -656,7 +597,7 @@ def get_units_from_csv(request):
                         unit_bathrooms_nos = unit_baths,
                         area_insqmts = unit['Unit Size'],
                         unit_status = unit['Status'],
-                        unit_occupied_by= Tenants.objects.get(tenant_id=2)
+                        unit_occupied_by= UserRegistry.objects.get(tenant_id=2)
                     )
 
                 os.remove(f'media\{csv_file.name}')
@@ -692,14 +633,14 @@ def update_properties(request):
             print(request.data['updatedImage'])
             updated_image = request.data['updatedImage']
 
-        if Landlord.objects.filter(landlord_id=landlord_id).exists():
+        if UserRegistry.objects.filter(landlord_id=landlord_id).exists():
 
             if Property.objects.filter(property_id=property_id).exists():
 
                 Property.objects.filter(property_id=property_id).update(
                 property_name = updation_data['propertyName'],
                 property_type = updation_data['propertyType'],
-                owned_by = Landlord.objects.get(landlord_id=landlord_id),
+                owned_by = UserRegistry.objects.get(landlord_id=landlord_id),
                 governate = updation_data['governateName'],
                 Street=updation_data['propertyStreet'],
                 City=updation_data['propertyCity'],
@@ -755,7 +696,7 @@ def get_landlord_all_units(request):
         user_id = request.query_params['userId']
         units_to_send = []
 
-        if Landlord.objects.filter(landlord_id = user_id).exists():
+        if UserRegistry.objects.filter(landlord_id = user_id).exists():
 
             landlord_properties = Property.objects.filter(owned_by = user_id).values_list('property_id', 'property_name')[::1]
             if len(landlord_properties) < 1:
@@ -903,7 +844,7 @@ def delete_units(request):
         user_id = request.data["userId"]
         unit_id = request.data['unitId']
 
-        if Landlord.objects.filter(landlord_id=user_id).exists():
+        if UserRegistry.objects.filter(landlord_id=user_id).exists():
 
             if Units.objects.filter(unit_id=unit_id).exists():
 
@@ -942,7 +883,7 @@ def create_tenants(request):
         tenants_details = recieved_data
         recieved_file = request.data['tenantDocFile']
 
-        if Landlord.objects.filter(landlord_id=landlord_id).exists():
+        if UserRegistry.objects.filter(landlord_id=landlord_id).exists():
 
             if UserRegistry.objects.filter(user_email=tenants_details['userEmail']).exists():
                 response_payload = {
@@ -963,9 +904,9 @@ def create_tenants(request):
             if user.user_id is not None:
 
                 if UserRegistry.objects.filter(user_id=user.user_id).exists():
-                    tt = Tenants.objects.create(
+                    tt = UserRegistry.objects.create(
                         app_user_id = UserRegistry.objects.get(user_id=user.user_id),
-                        reporting_owner = Landlord.objects.get(landlord_id=landlord_id),
+                        reporting_owner = UserRegistry.objects.get(landlord_id=landlord_id),
                         tenants_email = tenants_details['userEmail'],
                         firstname = tenants_details['userFirstname'],
                         lastname = tenants_details['userLastname'],
@@ -978,7 +919,7 @@ def create_tenants(request):
                     tt.save()
                     
                     if recieved_file:
-                        created_ten = Tenants.objects.get(tenant_id=tt.tenant_id)
+                        created_ten = UserRegistry.objects.get(tenant_id=tt.tenant_id)
                         created_ten.docs = recieved_file
                         created_ten.save()
                     response_payload = {
@@ -1003,7 +944,7 @@ def get_tenant_contract_form_details(request):
     # api for tenants and properties dropdowns(consists of name and ID for both)
     try:
         user_id = request.query_params['userId']
-        tenants_data = Tenants.objects.filter(reporting_owner=user_id).exclude(firstname="default").values_list("tenant_id", "firstname", "lastname")[::1]
+        tenants_data = UserRegistry.objects.filter(reporting_owner=user_id).exclude(firstname="default").values_list("tenant_id", "firstname", "lastname")[::1]
         tenants_array = []
         if len(tenants_data) > 0:
             for t in tenants_data:
@@ -1087,7 +1028,7 @@ def create_tenancy_record(request):
         tenant_id = recieved_data['tenantId']
         unit_id = recieved_data['unitId']
 
-        if Landlord.objects.filter(landlord_id = landlord_id).exists():
+        if UserRegistry.objects.filter(landlord_id = landlord_id).exists():
 
             if TenancyLease.objects.filter(unit_id=unit_id).exists():
                 response_payload = {
@@ -1104,7 +1045,7 @@ def create_tenancy_record(request):
             record = TenancyLease.objects.create(
                 property_id = Property.objects.get(property_id=property_id),
                 unit_id = Units.objects.get(unit_id=unit_id),
-                tenant_id = Tenants.objects.get(tenant_id=tenant_id),
+                tenant_id = UserRegistry.objects.get(tenant_id=tenant_id),
                 monthly_rent = recieved_data['rent'],
                 tenancy_start_date = recieved_data['startDate'],
                 tenancy_end_date = recieved_data['endDate'],
@@ -1113,8 +1054,8 @@ def create_tenancy_record(request):
             if record: 
                 Units.objects.filter(unit_id=unit_id).update(unit_occupied_by=tenant_id, unit_status="occupied")
                 prop = Property.objects.get(property_id=property_id)
-                prop.tenants.add(Tenants.objects.get(tenant_id=tenant_id))
-                Tenants.objects.filter(tenant_id=tenant_id).update(tenant_rent=recieved_data['rent'])
+                prop.UserRegistry.add(UserRegistry.objects.get(tenant_id=tenant_id))
+                UserRegistry.objects.filter(tenant_id=tenant_id).update(tenant_rent=recieved_data['rent'])
             
             if recieved_file and record:
                 tc = TenancyLease.objects.get(tenancy_id=record.tenancy_id)
@@ -1148,7 +1089,7 @@ def get_tenants_data(request):
 
         user_id = request.query_params['userId']
         tenants_with_tenancy = []
-        tenants_data = Tenants.objects.filter(reporting_owner=user_id).exclude(firstname="default").values()[::1]
+        tenants_data = UserRegistry.objects.filter(reporting_owner=user_id).exclude(firstname="default").values()[::1]
         for t in tenants_data:
             contract_id = None
             tenant_rent = None
@@ -1192,9 +1133,9 @@ def update_tenants_details(request):
         recieved_data = request.data
         user_id = recieved_data['userId']
         tenant_id = recieved_data['tenantId']
-        if Tenants.objects.filter(tenant_id=tenant_id).exists():
+        if UserRegistry.objects.filter(tenant_id=tenant_id).exists():
 
-            updation = Tenants.objects.filter(tenant_id=tenant_id).update(
+            updation = UserRegistry.objects.filter(tenant_id=tenant_id).update(
                 firstname=recieved_data['tenantFirstName'],
                 lastname = recieved_data['tenantLastName'],
                 tenants_email = recieved_data['tenantEmail'],
@@ -1228,7 +1169,7 @@ def get_tenants_documents(request):
     #api to fetch tenant document and tenancy contract document
     try:
         landlord_id = request.query_params['userId']
-        tenants = Tenants.objects.filter(reporting_owner=landlord_id).exclude(firstname="default").values_list('tenant_id','docs')[::1]
+        tenants = UserRegistry.objects.filter(reporting_owner=landlord_id).exclude(firstname="default").values_list('tenant_id','docs')[::1]
         documents_urls = []
         for t in tenants:
             tenancy_id = None
@@ -1273,8 +1214,8 @@ def update_tenants_related_documents(request):
             updated_tenancy_doc = request.data['updatedTenancyDoc']
         
         if updated_tenant_doc is not None:
-            if Tenants.objects.filter(tenant_id=tenant_id).exists():
-                t_obj = Tenants.objects.get(tenant_id=tenant_id)
+            if UserRegistry.objects.filter(tenant_id=tenant_id).exists():
+                t_obj = UserRegistry.objects.get(tenant_id=tenant_id)
 
                 if os.path.exists(str(t_obj.docs)):
                     os.remove(str(t_obj.docs))

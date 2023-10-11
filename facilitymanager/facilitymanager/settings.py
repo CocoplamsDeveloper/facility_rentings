@@ -91,7 +91,7 @@ WSGI_APPLICATION = 'facilitymanager.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'facilityrentings', 
+        'NAME': 'facilitymanagerdb', 
         'USER': 'postgres',
         'PASSWORD': 'cocoadmin',
         'HOST': '127.0.0.1', 

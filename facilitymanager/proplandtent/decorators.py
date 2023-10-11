@@ -1,5 +1,5 @@
 from functools import wraps
-from .models import RefreshTokenRegistry, UserRegistry, Landlord, Tenants, Role
+from .models import RefreshTokenRegistry, UserRegistry, Role
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from facilitymanager.settings import SECRET_KEY, ACCESS_TOKEN_LIFETIME, REFRESH_TOKEN_LIFETIME, ALGORITHM

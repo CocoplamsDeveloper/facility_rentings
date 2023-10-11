@@ -6,14 +6,13 @@ from . import views, oauth2
 urlpatterns = [
     # ...
     # path("graphql", GraphQLView.as_view(graphiql=True)),
-    path("landlord/<int:id>", views.get_landlord),
-    path("tenant/<int:id>", views.get_tenant),
+    # path("landlord/<int:id>", views.get_landlord),
+    # path("tenant/<int:id>", views.get_tenant),
     path("property/<int:id>", views.get_property),
     path("tenancy/<int:id>", views.get_tenancy),
     path("units/<int:id>", views.get_units),
     path("addrole/", views.add_roles),
-    path("ld-login", views.landlord_login),
-    path("ld-logout", views.landlord_logout),
+    path("user/logout", views.user_logout),
     path('add', views.create_properties),
     path('users/create', views.create_users),
     path('landlord-prop/get', views.landlord_property_list),

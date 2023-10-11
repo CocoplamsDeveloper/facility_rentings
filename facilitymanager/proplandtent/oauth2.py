@@ -1,4 +1,4 @@
-from .models import RefreshTokenRegistry, UserRegistry, Landlord, Tenants, Role
+from .models import RefreshTokenRegistry, UserRegistry, Role
 from facilitymanager.settings import ACCESS_TOKEN_LIFETIME, REFRESH_TOKEN_LIFETIME, SECRET_KEY, ALGORITHM
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
