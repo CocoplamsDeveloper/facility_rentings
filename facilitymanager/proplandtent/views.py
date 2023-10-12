@@ -1306,7 +1306,7 @@ def user_login(request):
                     "userRole" : user.user_role.role_name,
                     "userName" : user.user_fullname
                 }
-
+                request.session['accessToken'] = tokens['access_token']
 
                 response_payload = {
                     "message" : "Logged In",

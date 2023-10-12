@@ -34,6 +34,8 @@ def is_authorized(func):
     def wrapper_func(request, *args, **kwargs):
 
         try:
+            print(request.session['sessionid'])
+            print(request.session.get('accessToken', None))
             enc_token = request.META['HTTP_AUTHORIZATION']
             # print(request.COOKIES)
             # enc_token = request.COOKIES.get(settings.SIMPLE_JWT["AUTH_ACCESS_COOKIE"]) or None
