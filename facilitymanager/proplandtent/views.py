@@ -304,13 +304,15 @@ def user_logout(request):
     # api to logout landlord user
     try:
         user_id = request.query_params['userId']
+        token_id = None
         if 'tokenId' in request.query_params.keys():
             token_id = request.query_params['tokenId']
         if UserRegistry.objects.filter(user_id=user_id).exists():
             UserRegistry.objects.filter(user_id=user_id).update(user_status = "loggedout")
 
-            if RefreshTokenRegistry.objects.filter(id=token_id).exists():
-                RefreshTokenRegistry.objects.filter(id=token_id).update(
+            if token_id is not None:
+                if RefreshTokenRegistry.objects.filter(id=token_id).exists():
+                    RefreshTokenRegistry.objects.filter(id=token_id).update(
                     status = "invalid",
                     updated_on = datetime.utcnow()
                 )
@@ -1306,8 +1308,6 @@ def user_login(request):
                     "userRole" : user.user_role.role_name,
                     "userName" : user.user_fullname
                 }
-                request.session['accessToken'] = tokens['access_token']
-
                 response_payload = {
                     "message" : "Logged In",
                     "userData" : _data
