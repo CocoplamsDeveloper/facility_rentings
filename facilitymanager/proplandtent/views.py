@@ -299,7 +299,6 @@ def add_roles(request):
 
 
 @api_view(['GET'])
-@is_authorized
 def user_logout(request):
     # api to logout landlord user
     try:
