@@ -368,45 +368,31 @@ def create_users(request):
 
 
 @api_view(['POST'])
+@is_authorized
 def create_properties(request):
     # api to create property records in db 
     try:
         data = request.data
-        property_data = data['data']
-        property_photo = data['image']
-        property_data = json.loads(property_data)
-        print(property_data, property_photo)
-        if "propertySaleValue" in property_data.keys():
-            property_salevalue = float(property_data["propertySaleValue"])
-        if "propertyBuyValue" in property_data.keys():
-            property_buyvalue = float(property_data["propertyBuyValue"])
+        print(data)
+        property_data = data
 
-        landlord_id = property_data['userId']
-        if UserRegistry.objects.filter(landlord_id=landlord_id).exists():
+        user_id = property_data['userId']
+        if UserRegistry.objects.filter(user_id=user_id).exists():
             Property.objects.create(
                 property_name = property_data['propertyName'],
                 property_type = property_data['propertyType'],
-                owned_by = UserRegistry.objects.get(landlord_id=landlord_id),
+                owned_by = UserRegistry.objects.get(user_id=user_id),
                 governate = property_data['governateName'],
                 Street=property_data['propertyStreet'],
                 City=property_data['propertyCity'],
                 Block=property_data['propertyBlock'],
-                property_civil_id = property_data['propertyCivil'],
                 property_number = property_data['propertyNumber'],
                 area_insqmtrs = property_data['propertySize'],
-                property_image = property_photo,
                 property_status = property_data['propertyStatus'],
-                property_description = property_data['propertyDescription'],
                 built_year = property_data['propertyBuiltYear'],
-                selling_price = property_salevalue,
-                buying_price = property_buyvalue
             )
-            Nos_of_props = UserRegistry.objects.get(landlord_id=landlord_id).properties_owned
-            print(Nos_of_props)
-            Nos_of_props += 1
-            UserRegistry.objects.filter(landlord_id=landlord_id).update(properties_owned=Nos_of_props)
             response_payload = {
-                "message" : "success" 
+                "message" : "Property Added Successfully!" 
             }
             return Response(response_payload, 200)
         else:
@@ -417,9 +403,25 @@ def create_properties(request):
     except:
         traceback.print_exc()
         response_payload = {
-                'message' : "server error",
+                'message' : "Server error",
             }
         return Response(response_payload, 500)
+
+@api_view(['POST'])
+def add_property_additional_details(request):
+
+    try:
+        if "propertySaleValue" in property_data.keys():
+            property_salevalue = float(property_data["propertySaleValue"])
+        if "propertyBuyValue" in property_data.keys():
+            property_buyvalue = float(property_data["propertyBuyValue"])
+
+
+
+        pass
+    except:
+        traceback.print_exc()
+        return Response({"message" : "Server error"}, 500)
 
 
 @api_view(['GET'])

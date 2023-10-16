@@ -69,7 +69,7 @@ class Property(models.Model):
     Block = models.CharField(default=None, max_length=300)
     property_number = models.IntegerField(default=0)
     parking_areas = models.IntegerField(default=1)
-    property_civil_id = models.CharField(default=None, max_length=200)
+    property_civil_id = models.CharField(default="Not specified", max_length=200, null=True)
     underground_floors = models.IntegerField(default=1)
     units_per_floor = models.IntegerField(default=1)
     units_numbers_start_range = models.IntegerField(default=0)
@@ -81,8 +81,8 @@ class Property(models.Model):
     selling_price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     buying_price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     property_status = models.CharField(default="inactive")
-    property_description = models.TextField(max_length=500, default=None)
-    built_year = models.CharField(default=0000)
+    property_description = models.TextField(max_length=500, default=None, null=True)
+    built_year = models.IntegerField(default=0000)
 
 
 
