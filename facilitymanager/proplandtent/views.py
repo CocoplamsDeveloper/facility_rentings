@@ -378,7 +378,7 @@ def create_properties(request):
 
         user_id = property_data['userId']
         if UserRegistry.objects.filter(user_id=user_id).exists():
-            Property.objects.create(
+            prop = Property.objects.create(
                 property_name = property_data['propertyName'],
                 property_type = property_data['propertyType'],
                 owned_by = UserRegistry.objects.get(user_id=user_id),
@@ -392,9 +392,10 @@ def create_properties(request):
                 built_year = property_data['propertyBuiltYear'],
             )
             response_payload = {
-                "message" : "Property Added Successfully!" 
+                "message" : "Property Added Successfully!",
+                "propertyId" : prop.property_id
             }
-            return Response(response_payload, 200)
+            return Response(response_payload, 201)
         else:
             response_payload = {
                     "message" : "Invalid request" 
@@ -408,17 +409,44 @@ def create_properties(request):
         return Response(response_payload, 500)
 
 @api_view(['POST'])
+@is_authorized
 def add_property_additional_details(request):
 
     try:
-        if "propertySaleValue" in property_data.keys():
-            property_salevalue = float(property_data["propertySaleValue"])
-        if "propertyBuyValue" in property_data.keys():
-            property_buyvalue = float(property_data["propertyBuyValue"])
+        user_id = request.data['userId']
+        additional_data = json.loads(request.data['data'])
+        property_image = request.data['imageFile']
+        property_id = int(additional_data['propertyId'])
 
+        if not property_image:
+            response_payload = {
+                "message" : "Image not found!",
+                "propertyId" : property_id
+            }
+            return Response(response_payload, 400)
 
+        if Property.objects.filter(property_id=property_id).exists():
 
-        pass
+            record = Property.objects.get(property_id=property_id)
+            record.property_civil_id = additional_data['propertyCivilId']
+            record.property_description = additional_data['propertyDescription']
+            record.selling_price = float(additional_data['propertySaleValue'])
+            record.buying_price = float(additional_data['propertyBuyValue'])
+            record.property_image = property_image
+            record.save()
+
+            response_payload = {
+                "message" : "details added successfully",
+                "propertyId" : property_id
+            }
+
+            return Response(response_payload, 200)
+        else:
+            response_payload = {
+                "message" : "Property Not found!",
+                "propertyId" : property_id
+            }
+            return Response(response_payload, 400)
     except:
         traceback.print_exc()
         return Response({"message" : "Server error"}, 500)
@@ -464,12 +492,13 @@ def landlord_property_list(request):
 
 
 @api_view(['GET'])
+@is_authorized
 def get_landlord_properties_data(request):
     # api to get the landlord's properties
     try:
         landlord_id = request.query_params['userId']
 
-        if UserRegistry.objects.filter(landlord_id = landlord_id).exists():
+        if UserRegistry.objects.filter(user_id = landlord_id).exists():
 
             properties_data = Property.objects.filter(owned_by=landlord_id)
             properties_data = serializers.serialize('json', properties_data)
@@ -496,7 +525,7 @@ def get_landlord_properties_data(request):
     except:
         traceback.print_exc()
         response_payload = {
-                'message' : "server error",
+            'message' : "server error",
         }
         return Response(response_payload, 500)
     

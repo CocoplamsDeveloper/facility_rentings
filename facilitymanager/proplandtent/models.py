@@ -67,7 +67,7 @@ class Property(models.Model):
     City = models.CharField(default=None, max_length=300)
     Street = models.CharField(default=None, max_length=300)
     Block = models.CharField(default=None, max_length=300)
-    property_number = models.IntegerField(default=0)
+    property_number = models.CharField(default=0)
     parking_areas = models.IntegerField(default=1)
     property_civil_id = models.CharField(default="Not specified", max_length=200, null=True)
     underground_floors = models.IntegerField(default=1)

@@ -24,7 +24,7 @@ from django.conf import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('property/', include('proplandtent.urls')),
+    path('prop-app/', include('proplandtent.urls')),
     # path("graphql", GraphQLView.as_view(graphiql=True)),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

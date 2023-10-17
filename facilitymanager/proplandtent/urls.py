@@ -14,6 +14,7 @@ urlpatterns = [
     path("addrole/", views.add_roles),
     path("user/logout", views.user_logout),
     path('add', views.create_properties),
+    path('property-details/add', views.add_property_additional_details),
     path('users/create', views.create_users),
     path('landlord-prop/get', views.landlord_property_list),
     path('alllandlord/props', views.get_landlord_properties_data),
