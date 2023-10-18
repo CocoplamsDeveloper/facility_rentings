@@ -181,15 +181,19 @@ def get_user(request, id):
 
 
 @api_view(['GET'])
+@is_authorized
 def get_property(request, id):
     # api to fetch single property with id
     try:
+        if id is None or id == '':
+            response_payload = {"message": 'Property Id Not recieved'}
+            return Response(response_payload, 400)
+
         user_id = request.query_params['userId']
         pid = id
-        if UserRegistry.objects.filter(landlord_id=user_id).exists():
+        if UserRegistry.objects.filter(user_id=user_id).exists():
             if Property.objects.filter(property_id=pid).exists():
-                property_data = Property.objects.filter(property_id=pid)
-                property_data = json.loads(serializers.serialize('json', property_data))
+                property_data = Property.objects.filter(property_id=pid).values()
 
                 if len(property_data) > 1:
                     response_payload = {"message": "Multiple properties with same ID"}
@@ -498,17 +502,25 @@ def get_landlord_properties_data(request):
     try:
         landlord_id = request.query_params['userId']
 
+        properties = []
+
         if UserRegistry.objects.filter(user_id = landlord_id).exists():
 
-            properties_data = Property.objects.filter(owned_by=landlord_id)
+            properties_data = Property.objects.filter(owned_by=landlord_id).order_by('property_id')
             properties_data = serializers.serialize('json', properties_data)
             properties_data = json.loads(properties_data)
 
             if len(properties_data) > 0:
 
+                for prop in properties_data:
+                    properties.append({
+                        "propertyId" : prop['pk'],
+                        "details": prop['fields']
+                    })
+
                 response_payload = {
                     "message" : "fetched successfully",
-                    "propertiesData" : properties_data
+                    "propertiesData" : properties
                 }
             else:
                 response_payload = {
