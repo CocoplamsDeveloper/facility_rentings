@@ -668,6 +668,7 @@ def get_units_from_csv(request):
 def update_properties(request):
     # api to update property data
     try:
+        print(request.data)
         updation_data = request.data['data']
         updation_data = json.loads(updation_data)
         user_id = request.data['userId']
@@ -684,12 +685,12 @@ def update_properties(request):
                 Property.objects.filter(property_id=property_id).update(
                 property_name = updation_data['propertyName'],
                 property_type = updation_data['propertyType'],
-                owned_by = UserRegistry.objects.get(landlord_id=landlord_id),
+                owned_by = UserRegistry.objects.get(user_id=user_id),
                 governate = updation_data['governateName'],
                 Street=updation_data['propertyStreet'],
                 City=updation_data['propertyCity'],
                 Block=updation_data['propertyBlock'],
-                property_civil_id = updation_data['propertyCivil'],
+                property_civil_id = updation_data['propertyCivilId'],
                 property_number = updation_data['propertyNumber'],
                 area_insqmtrs = updation_data['propertySize'],
                 property_status = updation_data['propertyStatus'],
@@ -701,12 +702,13 @@ def update_properties(request):
 
                 if updated_image is not None:
 
-                    previous_image = Property.objects.get(property_id=property_id).property_image
-                    if os.path.exists(previous_image.path):
-                        os.remove(previous_image.path)
-                    image = Property.objects.get(property_id=property_id)
-                    image.property_image = updated_image
-                    image.save()
+                    prop = Property.objects.get(property_id=property_id)
+                    print(prop.property_image)
+                    if prop.property_image != '':
+                        if os.path.exists(prop.property_image.path):
+                            os.remove(prop.property_image.path)
+                    prop.property_image = updated_image
+                    prop.save()
 
                 response_payload = {
                     'message' : "property Updated Successfully",
