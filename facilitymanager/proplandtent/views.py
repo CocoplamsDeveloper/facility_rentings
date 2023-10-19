@@ -670,14 +670,14 @@ def update_properties(request):
     try:
         updation_data = request.data['data']
         updation_data = json.loads(updation_data)
-        landlord_id = updation_data['userId']
+        user_id = request.data['userId']
         property_id = updation_data['propertyId']
         updated_image = None
         if 'updatedImage' in request.data.keys():
             print(request.data['updatedImage'])
             updated_image = request.data['updatedImage']
 
-        if UserRegistry.objects.filter(landlord_id=landlord_id).exists():
+        if UserRegistry.objects.filter(user_id=user_id).exists():
 
             if Property.objects.filter(property_id=property_id).exists():
 
