@@ -97,7 +97,7 @@ class Units(models.Model):
     unit_bedrooms = models.IntegerField(default=0)
     unit_rent = models.DecimalField(default=0, max_digits=15, decimal_places=2)
     area_insqmts = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    unit_occupied_by = models.ForeignKey(UserRegistry, on_delete=models.CASCADE)
+    unit_occupied_by = models.IntegerField(default=0)
     unit_status = models.CharField(default="unoccupied", max_length=100)
 
 class TenancyLease(models.Model):

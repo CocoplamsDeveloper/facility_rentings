@@ -544,6 +544,7 @@ def get_landlord_properties_data(request):
         return Response(response_payload, 500)
     
 @api_view(['POST'])
+@is_authorized
 def add_units(request):
     # api to add units entered manually by users
     try:
@@ -551,30 +552,31 @@ def add_units(request):
         landlord_id = recieved_data['userId']
         property_id = recieved_data['propertyId']
         units_data = recieved_data['unitsData']
+        print(units_data)
         
         if Property.objects.filter(property_id=property_id).exists():
             if len(units_data) > 0:
-                for unit in units_data:
-                    unit_beds = unit['Unit Bedrooms']
-                    unit_baths = unit['Unit Bathrooms']
-                    if unit['Unit Bedrooms'] == "other":
-                        unit_beds = 0
-                    if unit['Unit Bathrooms'] == "other":
-                        unit_baths = 0
-                    Units.objects.create(
-                        unit_property = Property.objects.get(property_id=property_id),
-                        unit_name =  unit['Unit Name/Number'],
-                        unit_type = unit['Unit Type'],
-                        unit_rent = unit['Unit Rent'],
-                        unit_bedrooms = int(unit_beds),
-                        unit_bathrooms_nos = int(unit_baths),
-                        area_insqmts = unit['Unit Size'],
-                        unit_status = unit['Status'],
-                        unit_occupied_by= UserRegistry.objects.get(tenant_id=2)
-                    )
+                unit_beds = units_data['Unit Bedrooms']
+                unit_baths = units_data['Unit Bathrooms']
+                if units_data['Unit Bedrooms'] == "other":
+                    unit_beds = 0
+                if units_data['Unit Bathrooms'] == "other":
+                    unit_baths = 0
+                created_unit = Units.objects.create(
+                    unit_property = Property.objects.get(property_id=property_id),
+                    unit_name =  units_data['Unit Name/Number'],
+                    unit_type = units_data['Unit Type'],
+                    unit_rent = units_data['Unit Rent'],
+                    unit_bedrooms = int(unit_beds),
+                    unit_bathrooms_nos = int(unit_baths),
+                    area_insqmts = units_data['Unit Size'],
+                    unit_status = units_data['Status'],
+                    unit_floor = units_data['Unit Floor']
+                )
 
                 response_payload = {
-                    "message" : "Units Data updated!"
+                    "message" : "Unit added successfully",
+                    "unit_id" : created_unit.unit_id 
                 }
                 return Response(response_payload, 200)
             else:
@@ -583,7 +585,7 @@ def add_units(request):
                 }
                 return Response(response_payload, 400)
         else:
-            response_payload = {'message': 'property doesnot exist'}
+            response_payload = {'message': 'property does not exist'}
             return Response(response_payload, 401)
     except:
         traceback.print_exc()
@@ -738,6 +740,7 @@ def update_properties(request):
 
 
 @api_view(['GET'])
+@is_authorized
 def get_landlord_all_units(request):
 
     # api to get landlord all units
@@ -745,7 +748,7 @@ def get_landlord_all_units(request):
         user_id = request.query_params['userId']
         units_to_send = []
 
-        if UserRegistry.objects.filter(landlord_id = user_id).exists():
+        if UserRegistry.objects.filter(user_id = user_id).exists():
 
             landlord_properties = Property.objects.filter(owned_by = user_id).values_list('property_id', 'property_name')[::1]
             if len(landlord_properties) < 1:
