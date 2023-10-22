@@ -394,6 +394,7 @@ def create_properties(request):
                 area_insqmtrs = property_data['propertySize'],
                 property_status = property_data['propertyStatus'],
                 built_year = property_data['propertyBuiltYear'],
+                floors = property_data['propertyFloor']
             )
             response_payload = {
                 "message" : "Property Added Successfully!",
@@ -464,7 +465,7 @@ def landlord_property_list(request):
 
         landlord_id = request.query_params['userId']
 
-        properties = Property.objects.filter(owned_by=landlord_id).values_list('property_id', 'property_name', 'property_type')[::1]
+        properties = Property.objects.filter(owned_by=landlord_id).order_by("property_id").values_list('property_id', 'property_name', 'property_type', 'floors')[::1]
         property_data = []
         if len(properties) == 0:
             response_payload = {
@@ -476,7 +477,8 @@ def landlord_property_list(request):
                 property_data.append({
                     "propertyId"  : prop[0],
                     "propertyName" : prop[1],
-                    "propertyType" : prop[2]
+                    "propertyType" : prop[2],
+                    "floors": prop[3]
                 })
 
             response_payload = {
@@ -665,6 +667,7 @@ def get_units_from_csv(request):
         return Response(response_payload, 500)
 
 @api_view(['POST'])
+@is_authorized
 def update_properties(request):
     # api to update property data
     try:
