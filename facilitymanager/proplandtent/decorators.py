@@ -54,11 +54,13 @@ def is_authorized(func):
                 user_id = request.query_params['userId']
             else:
                 user_id = request.data['userId']
-            aud = UserRegistry.objects.get(user_id = user_id).user_role
-            role = aud.role_name
-            print(role)
-            decoded_payload = jwt.decode(token, SECRET_KEY, audience=role, algorithms=ALGORITHM)
-            return func(request, *args, **kwargs)
+            if UserRegistry.objects.filter(user_id=user_id).exists():
+                aud = UserRegistry.objects.get(user_id = user_id).user_role
+                role = aud.role_name
+                decoded_payload = jwt.decode(token, SECRET_KEY, audience=role, algorithms=ALGORITHM)
+                return func(request, *args, **kwargs)
+            else:
+                return Response({"message" : "User Not Found"}, 401)
         except jwt.InvalidTokenError:
             return Response({"message" :  "Invalid session"}, 403)
         except jwt.ExpiredSignatureError:
