@@ -7,7 +7,7 @@ urlpatterns = [
     # ...
     # path("graphql", GraphQLView.as_view(graphiql=True)),
     # path("landlord/<int:id>", views.get_landlord),
-    # path("tenant/<int:id>", views.get_tenant),
+    path("tenant/<int:id>", views.get_tenant),
     path("property/<int:id>", views.get_property),
     path("tenancy/<int:id>", views.get_tenancy),
     path("units/<int:id>", views.get_units),

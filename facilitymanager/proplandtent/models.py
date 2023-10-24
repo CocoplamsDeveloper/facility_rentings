@@ -17,9 +17,9 @@ class UserRegistry(models.Model):
     user_role = models.ForeignKey(Role, on_delete=models.CASCADE)
     user_status = models.CharField(max_length=100, default="active")
     user_password = models.CharField(max_length = 150, default="abc123")
-    users_id_doc_no = models.CharField(max_length=100, default="None")
     user_document = models.FileField(upload_to="user_documents", default=None)
     user_image = models.ImageField(upload_to="user_images", default=None)
+    id_number = models.CharField(max_length=200, default="None")
 
 # Landlord model
 # class Landlord(models.Model):
