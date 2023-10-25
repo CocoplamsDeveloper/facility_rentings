@@ -44,16 +44,20 @@ def get_tenant_tenancy_data(tenant_id):
         "unitFloor" : "--",
         }
         if TenancyLease.objects.filter(tenant_id=tenant_id).exists():
+
+            print("tenancy exists")
+
             tenancy = TenancyLease.objects.get(tenant_id=tenant_id)
-            return_dict["propertyId"] = tenancy.property_id
+            return_dict["propertyId"] = tenancy.property_id.property_id
             return_dict["tenantRent"] = tenancy.monthly_rent
             return_dict["ContractStartDate"] = tenancy.tenancy_start_date
             return_dict["ContractEndDate"] = tenancy.tenancy_end_date
             return_dict["tenancyContractId"] = tenancy.tenancy_id
         
             tenant_unit_id = tenancy.unit_id
-            if Units.objects.filter(unit_id=tenant_unit_id).exists():
-                unit = Units.objects.get(unit_id=tenant_unit_id)
+            print(tenant_unit_id.unit_id)
+            if Units.objects.filter(unit_id=tenant_unit_id.unit_id).exists():
+                unit = Units.objects.get(unit_id=tenant_unit_id.unit_id)
                 return_dict['unitName'] = unit.unit_name
                 return_dict['unitFloor'] = unit.unit_floor
         
@@ -194,6 +198,39 @@ def get_tenancy(request, id):
         }
         return Response(response_payload, 500)
     
+
+
+@api_view(['GET'])
+@is_authorized
+def get_unit_floor_wise(request):
+
+    try:
+        print(request.query_params)
+        property_id = request.query_params['propertyId']
+        floor_no = request.query_params['floor']
+
+        if Units.objects.filter(unit_property=property_id).exists():
+
+            
+            unit_details = Units.objects.filter(unit_floor=floor_no, unit_property=property_id).values('unit_id', 'unit_name', 'unit_rent')[::1]
+
+            response_payload = {
+                "message" : "fetched",
+                "units" : unit_details
+            }
+            return Response(response_payload, 200)
+        else:
+            response_payload = {
+                "message" : "No units for the property",
+                "units" : []
+            }
+            return Response(response_payload, 200)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
 
 
 @api_view(['GET'])
@@ -983,64 +1020,55 @@ def get_property_units(request):
 
 
 @api_view(['POST'])
+@is_authorized
 def create_tenancy_record(request):
     # api for tenancy record creation
     try:
-        recieved_data = json.loads(request.data['data'])
+        recieved_data = json.loads(request.data['tenancyData'])
         if request.data['contractDoc']:
             recieved_file = request.data['contractDoc']
 
-        landlord_id = recieved_data['userId']
+        user_id = request.data['userId']
         property_id = recieved_data['propertyId']
         tenant_id = recieved_data['tenantId']
         unit_id = recieved_data['unitId']
 
-        if UserRegistry.objects.filter(landlord_id = landlord_id).exists():
-
-            if TenancyLease.objects.filter(unit_id=unit_id).exists():
-                response_payload = {
-                    "message" : "Unit already in existing contract!"
-                }
-                return Response(response_payload, 400)
-
-            if TenancyLease.objects.filter(tenant_id = tenant_id).exists():
-                response_payload = {
-                    "message" : "Tenant already in existing contract!"
-                }
-                return Response(response_payload, 400)
-                
-            record = TenancyLease.objects.create(
-                property_id = Property.objects.get(property_id=property_id),
-                unit_id = Units.objects.get(unit_id=unit_id),
-                tenant_id = UserRegistry.objects.get(tenant_id=tenant_id),
-                monthly_rent = recieved_data['rent'],
-                tenancy_start_date = recieved_data['startDate'],
-                tenancy_end_date = recieved_data['endDate'],
-                tenancy_status = "active",
-            )
-            if record: 
-                Units.objects.filter(unit_id=unit_id).update(unit_occupied_by=tenant_id, unit_status="occupied")
-                prop = Property.objects.get(property_id=property_id)
-                prop.UserRegistry.add(UserRegistry.objects.get(tenant_id=tenant_id))
-                UserRegistry.objects.filter(tenant_id=tenant_id).update(tenant_rent=recieved_data['rent'])
-            
-            if recieved_file and record:
-                tc = TenancyLease.objects.get(tenancy_id=record.tenancy_id)
-                tc.tenancy_agreement = recieved_file
-                tc.save()
-
+        if TenancyLease.objects.filter(unit_id=unit_id).exists():
             response_payload = {
-                "message" : "record created successfully",
-                "tenancyId" : record.tenancy_id
-            }
-
-            return Response(response_payload, 201)
-        else:
-            response_payload = {
-                "message" : "Invalid Request"
+                "message" : "Unit already in existing contract!"
             }
             return Response(response_payload, 400)
 
+        if TenancyLease.objects.filter(tenant_id = tenant_id).exists():
+            response_payload = {
+                "message" : "Tenant already in existing contract!"
+            }
+            return Response(response_payload, 400)
+                
+        record = TenancyLease.objects.create(
+            property_id = Property.objects.get(property_id=property_id),
+            unit_id = Units.objects.get(unit_id=unit_id),
+            tenant_id = UserRegistry.objects.get(user_id=tenant_id),
+            monthly_rent = recieved_data['tenancyRent'],
+            tenancy_start_date = recieved_data['startDate'],
+            tenancy_end_date = recieved_data['endDate'],
+            tenancy_status = "active",
+        )
+        if record: 
+            Units.objects.filter(unit_id=unit_id).update(unit_occupied_by=tenant_id, unit_status="occupied", unit_rent=recieved_data['tenancyRent'])
+            prop = Property.objects.get(property_id=property_id)
+            prop.tenants.add(UserRegistry.objects.get(user_id=tenant_id))        
+        if recieved_file and record:
+            tc = TenancyLease.objects.get(tenancy_id=record.tenancy_id)
+            tc.tenancy_agreement = recieved_file
+            tc.save()
+
+        response_payload = {
+            "message" : "tenancy created successfully",
+            "tenancyId" : record.tenancy_id
+        }
+
+        return Response(response_payload, 201)
     except:
         traceback.print_exc()
         response_payload = {

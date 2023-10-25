@@ -11,6 +11,7 @@ urlpatterns = [
     path("property/<int:id>", views.get_property),
     path("tenancy/<int:id>", views.get_tenancy),
     path("units/<int:id>", views.get_units),
+    path("floors/units", views.get_unit_floor_wise),
     path("addrole/", views.add_roles),
     path("user/logout", views.user_logout),
     path('add', views.create_properties),
