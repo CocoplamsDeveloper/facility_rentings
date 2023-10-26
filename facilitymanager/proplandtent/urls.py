@@ -32,9 +32,10 @@ urlpatterns = [
     path('details/tenants', views.get_tenants_data),
     path('tenants/update', views.update_tenants_details),
     path('tenant-docs/get', views.get_tenants_documents),
-    path('tenant-docs/update', views.update_tenants_related_documents),
+    path('contract-doc/update', views.update_tenancy_document),
     path('contract-status/update', views.update_tenancy_status),
-    path('user/login', views.user_login)
+    path('user/login', views.user_login),
+    path('contract-doc/download', views.serve_contract_document)
     # path('token/get', oauth2.testing_tokens),
     # path('token/test', oauth2.with_decorator)
 ]

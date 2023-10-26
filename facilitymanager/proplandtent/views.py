@@ -6,6 +6,7 @@ from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTo
 from django.middleware import csrf
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
+from django.http import HttpResponse
 from .decorators import is_authorized, is_admin, is_landlord, is_tenant
 from .oauth2 import create_tokens
 from django.conf import settings
@@ -34,34 +35,41 @@ def get_tenant_tenancy_data(tenant_id):
 
     try:
 
-        return_dict = {
-        "propertyId" : "--",
-        "tenantRent" : "--",
-        "ContractStartDate" : "--",
-        "ContractEndDate" : "--",
-        "tenancyContractId" : "--",
-        "unitName" : "--",
-        "unitFloor" : "--",
-        }
+        # return_dict = {
+        # "propertyId" : "--",
+        # "tenantRent" : "--",
+        # "ContractStartDate" : "--",
+        # "ContractEndDate" : "--",
+        # "tenancyContractId" : "--",
+        # "unitId": "--",
+        # "unitName" : "--",
+        # "unitFloor" : "--",
+        # "tenancyStatus": "--",
+        # "contractDoc": "--"
+        # }
+        temp = []
         if TenancyLease.objects.filter(tenant_id=tenant_id).exists():
 
             print("tenancy exists")
 
-            tenancy = TenancyLease.objects.get(tenant_id=tenant_id)
-            return_dict["propertyId"] = tenancy.property_id.property_id
-            return_dict["tenantRent"] = tenancy.monthly_rent
-            return_dict["ContractStartDate"] = tenancy.tenancy_start_date
-            return_dict["ContractEndDate"] = tenancy.tenancy_end_date
-            return_dict["tenancyContractId"] = tenancy.tenancy_id
-        
-            tenant_unit_id = tenancy.unit_id
-            print(tenant_unit_id.unit_id)
-            if Units.objects.filter(unit_id=tenant_unit_id.unit_id).exists():
-                unit = Units.objects.get(unit_id=tenant_unit_id.unit_id)
-                return_dict['unitName'] = unit.unit_name
-                return_dict['unitFloor'] = unit.unit_floor
-        
-        return return_dict
+            tenancy = TenancyLease.objects.filter(tenant_id=tenant_id).values()
+            for t in tenancy:
+                d = {}
+                d['details'] = t
+                if Units.objects.filter(unit_id=t['unit_id_id']).exists():
+                    unit = Units.objects.get(unit_id=t['unit_id_id'])
+                    d['unitName'] = unit.unit_name
+                    d['unitFloor'] = unit.unit_floor
+                
+                temp.append(d)
+            # return_dict["propertyId"] = tenancy.property_id.property_id
+            # return_dict["tenantRent"] = tenancy.monthly_rent
+            # return_dict["ContractStartDate"] = tenancy.tenancy_start_date
+            # return_dict["ContractEndDate"] = tenancy.tenancy_end_date
+            # return_dict["tenancyContractId"] = tenancy.tenancy_id
+            # return_dict["tenancyStatus"] = tenancy.tenancy_status
+            # return_dict["contractDoc"] = str(tenancy.tenancy_agreement)
+        return temp
     except:
         traceback.print_exc()
 
@@ -1025,7 +1033,8 @@ def create_tenancy_record(request):
     # api for tenancy record creation
     try:
         recieved_data = json.loads(request.data['tenancyData'])
-        if request.data['contractDoc']:
+        recieved_file = None
+        if 'contractDoc' in request.data.keys():
             recieved_file = request.data['contractDoc']
 
         user_id = request.data['userId']
@@ -1039,11 +1048,6 @@ def create_tenancy_record(request):
             }
             return Response(response_payload, 400)
 
-        if TenancyLease.objects.filter(tenant_id = tenant_id).exists():
-            response_payload = {
-                "message" : "Tenant already in existing contract!"
-            }
-            return Response(response_payload, 400)
                 
         record = TenancyLease.objects.create(
             property_id = Property.objects.get(property_id=property_id),
@@ -1058,7 +1062,7 @@ def create_tenancy_record(request):
             Units.objects.filter(unit_id=unit_id).update(unit_occupied_by=tenant_id, unit_status="occupied", unit_rent=recieved_data['tenancyRent'])
             prop = Property.objects.get(property_id=property_id)
             prop.tenants.add(UserRegistry.objects.get(user_id=tenant_id))        
-        if recieved_file and record:
+        if recieved_file is not None and record:
             tc = TenancyLease.objects.get(tenancy_id=record.tenancy_id)
             tc.tenancy_agreement = recieved_file
             tc.save()
@@ -1092,10 +1096,17 @@ def get_tenants_data(request):
         for t in tenants_data:
 
             tenancy_data = get_tenant_tenancy_data(t['user_id'])
-            tenants_with_tenancy.append({
-                "tenant" : t,
-                "tenancy" : tenancy_data
-            })
+            if len(tenancy_data) == 0:
+                tenants_with_tenancy.append({
+                    "tenant" : t,
+                    "tenancy" : []
+                })
+            else:
+                for i in tenancy_data:
+                    tenants_with_tenancy.append({
+                        "tenant" : t,
+                        "tenancy" : i
+                    })
 
         response_payload = {
             "message" : "fetched successfully",
@@ -1183,29 +1194,17 @@ def get_tenants_documents(request):
 
 
 @api_view(['POST'])
-def update_tenants_related_documents(request):
+@is_authorized
+def update_tenancy_document(request):
 
     try:
         recieved_data = request.data
-        landlord_id = recieved_data['userId']
-        tenant_id = recieved_data['tenantId']
         tenancy_id = recieved_data['tenancyId']
-        updated_tenant_doc = None
         updated_tenancy_doc = None
-        if 'updatedTenantDoc' in request.data.keys():
-            updated_tenant_doc = request.data['updatedTenantDoc']
+
         if 'updatedTenancyDoc' in request.data.keys():
             updated_tenancy_doc = request.data['updatedTenancyDoc']
         
-        if updated_tenant_doc is not None:
-            if UserRegistry.objects.filter(tenant_id=tenant_id).exists():
-                t_obj = UserRegistry.objects.get(tenant_id=tenant_id)
-
-                if os.path.exists(str(t_obj.docs)):
-                    os.remove(str(t_obj.docs))
-                t_obj.docs = updated_tenant_doc
-                t_obj.save()
-
         if updated_tenancy_doc is not None:
             if TenancyLease.objects.filter(tenancy_id=tenancy_id).exists():
                 tl_obj = TenancyLease.objects.get(tenancy_id=tenancy_id)
@@ -1216,7 +1215,6 @@ def update_tenants_related_documents(request):
         
         response_payload = {
             "message" : "documents updated successfully",
-            "tenantId" : tenant_id,
             "tenancyId" : tenancy_id
         }
         return Response(response_payload, 200)
@@ -1226,6 +1224,42 @@ def update_tenants_related_documents(request):
             "message" : "server error"
         }
         return Response(response_payload, 500)
+    
+
+@api_view(['GET'])
+@is_authorized
+def serve_contract_document(request):
+
+    try:
+        tenancy_id = request.query_params['tenancyId']
+
+        if TenancyLease.objects.filter(tenancy_id=tenancy_id).exists():
+
+            record = TenancyLease.objects.get(tenancy_id=tenancy_id)
+            if record.tenancy_agreement == None or record.tenancy_agreement == '':
+                response_payload = {
+                    "message" : "Contract document Not Found for this tenancy!"
+                }
+                return Response(response_payload, 400)
+            
+
+
+            response = HttpResponse(record.tenancy_agreement, content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename=contract_document.pdf'
+
+            return response
+        else:
+            response_payload = {
+                "message" : "contract not found"
+            }
+            return Response(response_payload, 400)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "server error"
+        }
+        return Response(response_payload, 500)
+
 
 @api_view(['PUT'])
 def update_tenancy_status(request):
@@ -1324,7 +1358,6 @@ def user_login(request):
             "message" : "Server Error"
         }
         return Response(response_payload, 500)
-
 
 
 
