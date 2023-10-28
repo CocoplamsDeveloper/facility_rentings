@@ -84,7 +84,7 @@ class Property(models.Model):
     property_status = models.CharField(default="inactive")
     property_description = models.TextField(max_length=500, default=None, null=True)
     built_year = models.IntegerField(default=0000)
-
+    deletedby_user = models.BooleanField(default=False)
 
 
 class Units(models.Model):
