@@ -21,41 +21,6 @@ class UserRegistry(models.Model):
     user_image = models.ImageField(upload_to="user_images", default=None)
     id_number = models.CharField(max_length=200, default="None")
 
-# Landlord model
-# class Landlord(models.Model):
-#     landlord_id = models.BigAutoField(primary_key=True, unique=True)
-#     app_user_id = models.ForeignKey(UserRegistry, on_delete=models.CASCADE)
-#     firstname = models.CharField(max_length=100)
-#     lastname = models.CharField(max_length=100)
-#     landlord_fullname = models.CharField(max_length=250, default="default")
-#     contact_number = models.BigIntegerField()
-#     landlord_email = models.EmailField()
-#     nationality = models.CharField(max_length=100)
-#     properties_owned = models.IntegerField(default=0)
-#     properties_details = models.JSONField(default=dict)
-#     landlord_status = models.CharField(max_length=150, default="inactive")
-#     landlord_password = models.CharField(max_length = 150, default="abc123")
-
-#tenants table
-# class Tenants(models.Model):
-#     tenant_id = models.BigAutoField(primary_key=True, unique=True)
-#     app_user_id = models.ForeignKey(UserRegistry, on_delete=models.CASCADE)
-#     reporting_owner = models.ForeignKey(Landlord, on_delete=models.CASCADE, default=1)
-#     firstname = models.CharField(max_length=100)
-#     lastname = models.CharField(max_length=100)
-#     full_name = models.CharField(max_length=250, default="default")
-#     contact_number = models.BigIntegerField()
-#     tenants_email = models.EmailField()
-#     nationality = models.CharField(max_length=100)
-#     previous_address = models.TextField(max_length=500, default=None)
-#     tenant_rent = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-#     docs = models.FileField(upload_to="tenants_documents")
-#     tenant_status = models.CharField(max_length=150, default="inactive")
-#     tenants_password = models.CharField(max_length = 150, default="abc123")
-
-# def get_tenants():
-#     return Tenants.objects.get_or_create(tenant_id=1)
-
 #property table
 class Property(models.Model):
     property_id = models.BigAutoField(primary_key=True, unique=True)
@@ -126,3 +91,17 @@ class RefreshTokenRegistry(models.Model):
     status = models.CharField()
 
 
+class user_documents(models.Model):
+
+    document_id = models.BigAutoField(primary_key=True, unique=True)
+    document_name = models.CharField(max_length=250, default="userdocument")
+    user_id = models.ForeignKey(UserRegistry, on_delete=models.CASCADE)
+    document_field= models.FileField(upload_to='user_documents')
+
+class property_documents(models.Model):
+
+    document_id = models.BigAutoField(primary_key=True, unique=True)
+    document_name = models.CharField(max_length=250, default="propdocument")
+    property_id = models.IntegerField()
+    unit_id = models.IntegerField()
+    document_field = models.FileField(upload_to="property_documents")
