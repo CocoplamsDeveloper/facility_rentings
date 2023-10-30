@@ -8,7 +8,7 @@ from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
 from django.http import HttpResponse
 from .decorators import is_authorized, is_admin, is_landlord, is_tenant
-from .oauth2 import create_tokens
+from .oauth2 import create_tokens, return_accesstoken_from_refresh
 from django.conf import settings
 from facilitymanager.settings import ACCESS_TOKEN_LIFETIME, ALGORITHM, REFRESH_TOKEN_LIFETIME
 from datetime import datetime, date
@@ -72,6 +72,8 @@ def get_tenant_tenancy_data(tenant_id):
         return temp
     except:
         traceback.print_exc()
+
+
 
 # APIs
 
@@ -1358,9 +1360,27 @@ def user_login(request):
             "message" : "Server Error"
         }
         return Response(response_payload, 500)
+    
 
 
+@api_view(['GET'])
+def refresh_user_login(request):
 
+    try:
+        user_id = request.query_params['userId']
+        refresh_token_id = request.query['refreshTokenId']
+
+        data, status = return_accesstoken_from_refresh(refresh_token_id, user_id)
+        if status:
+            return Response({"message" : "login refreshed", "access_tokens" : data}, 200)
+        else:
+            return Response({"message": "session invalid"}, 401)
+    except:
+        traceback.print_exc()
+        response_payload = {
+            "message" : "Server Error"
+        }
+        return Response(response_payload, 500)
 
 
 

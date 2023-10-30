@@ -45,7 +45,7 @@ def is_authorized(func):
         except jwt.ExpiredSignatureError:
             return Response({"message" : "Session expired"}, 403)
         except jwt.InvalidAudienceError:
-            return Response({"message" : "User not authorized"}, 403)
+            return Response({"message" : "User not authorized"}, 401)
         except:
             traceback.print_exc()
             return Response({"message" : "Server error"}, 500)
