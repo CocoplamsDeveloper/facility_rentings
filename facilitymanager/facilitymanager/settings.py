@@ -14,21 +14,25 @@ from pathlib import Path
 from datetime import timedelta
 from corsheaders.defaults import default_headers
 import os
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_dyijhjcpe^$y%yiqx6a0u)x9&9az_#vw**t!%a8&%_-)mtd(4'
+
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '*'
+]
 
 
 # Application definition
@@ -92,10 +96,10 @@ WSGI_APPLICATION = 'facilitymanager.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'facilitymanagerdb', 
-        'USER': 'postgres',
-        'PASSWORD': 'cocoadmin',
-        'HOST': '127.0.0.1', 
+        'NAME': 'postgres', 
+        'USER': os.getenv('DATABASE_USER_NAME'),
+        'PASSWORD': os.getenv('DATABASE_PASSWORD'),
+        'HOST': os.getenv('DATABASE_HOST'), 
         'PORT': '5432',
     }
 }
@@ -119,7 +123,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
     
-ACCESS_TOKEN_LIFETIME = timedelta(hours=12)
+ACCESS_TOKEN_LIFETIME = timedelta(minutes=60)
 REFRESH_TOKEN_LIFETIME = timedelta(days=1)
 ALGORITHM = 'HS256'
 
@@ -149,20 +153,10 @@ MEDIA_URL = '/media/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = default_headers + (
     'Access-Control-Allow-Origin',
 )
 
-# SIMPLE_JWT = {
-# 'AUTH_ACCESS_COOKIE' : 'access_token',  # Cookie name. Enables cookies if value is set.
-# 'AUTH_REFRESH_COOKIE' : 'refresh_token',
-# 'AUTH_COOKIE_DOMAIN' : None,      # A string like "example.com", or None for standard domain cookie.
-# 'AUTH_COOKIE_SECURE' : False,      # Whether the auth cookies should be secure (https:// only).
-# 'AUTH_COOKIE_HTTP_ONLY' : True,   # Http only cookie flag.It's not fetch by javascript.
-# 'AUTH_COOKIE_PATH' : '/',         # The path of the auth cookie.
-# 'AUTH_COOKIE_SAMESITE' : 'Lax' # Whether to set the flag restricting cookie leaks on cross-site requests.
-#                                   # This can be 'Lax', 'Strict', or None to disable the flag.
-# }
-
-SESSION_COOKIE_HTTPONLY = True

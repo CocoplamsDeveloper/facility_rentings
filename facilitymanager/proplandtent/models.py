@@ -90,18 +90,3 @@ class RefreshTokenRegistry(models.Model):
     scope = models.CharField()
     status = models.CharField()
 
-
-class user_documents(models.Model):
-
-    document_id = models.BigAutoField(primary_key=True, unique=True)
-    document_name = models.CharField(max_length=250, default="userdocument")
-    user_id = models.ForeignKey(UserRegistry, on_delete=models.CASCADE)
-    document_field= models.FileField(upload_to='user_documents')
-
-class property_documents(models.Model):
-
-    document_id = models.BigAutoField(primary_key=True, unique=True)
-    document_name = models.CharField(max_length=250, default="propdocument")
-    property_id = models.IntegerField()
-    unit_id = models.IntegerField()
-    document_field = models.FileField(upload_to="property_documents")
