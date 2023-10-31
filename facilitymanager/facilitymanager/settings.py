@@ -31,8 +31,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    '*'
-]
+'rentings-app-backendv1-env.eba-jukz772f.me-south-1.elasticbeanstalk.com']
 
 
 # Application definition
