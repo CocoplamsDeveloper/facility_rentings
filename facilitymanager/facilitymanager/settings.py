@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = False
 
 ALLOWED_HOSTS = [
-'*']
+'rentingsbackendapp-env.eba-3mz7jgda.me-south-1.elasticbeanstalk.com']
 
 
 # Application definition
@@ -131,7 +131,7 @@ ALGORITHM = 'HS256'
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kuwait'
 
 USE_I18N = True
 
