@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['backend-rentings-env.eba-bdnqs3bn.me-south-1.elasticbeanstalk.com', 'api.rentings.me', 'localhost']
+ALLOWED_HOSTS = ['backend-rentings-env.eba-bdnqs3bn.me-south-1.elasticbeanstalk.com', 'api.rentings.me', '127.0.0.1', '*']
 
 
 # Application definition
