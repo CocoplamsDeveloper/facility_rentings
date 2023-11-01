@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ['backend-rentings-env.eba-bdnqs3bn.me-south-1.elasticbeanstalk.com', 'api.rentings.me', 'localhost']
 
 
 # Application definition
@@ -62,6 +62,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'facilitymanager.urls'
 
 CORS_ALLOWED_ORIGINS = [
+    'https://admin.rentings.me'
     'http://localhost:5173',
     'http://localhost:5174',
 ]
