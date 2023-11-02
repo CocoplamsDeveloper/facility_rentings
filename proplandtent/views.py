@@ -1308,6 +1308,7 @@ def user_login(request):
 
     try:
         user_data = request.data
+        print(user_data)
         email = user_data['userEmail']
         password = user_data['userPassword']
 
