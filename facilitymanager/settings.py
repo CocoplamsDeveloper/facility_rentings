@@ -62,7 +62,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'facilitymanager.urls'
 
 CORS_ALLOWED_ORIGINS = [
-    'https://admin.rentings.me'
+    'https://admin.rentings.me',
     'http://localhost:5173',
     'http://localhost:5174',
 ]
@@ -95,7 +95,7 @@ WSGI_APPLICATION = 'facilitymanager.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres', 
+        'NAME': 'facilitymanagerdb', 
         'USER': os.getenv('DATABASE_USER_NAME'),
         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
         'HOST': os.getenv('DATABASE_HOST'), 
