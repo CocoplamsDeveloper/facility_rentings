@@ -62,7 +62,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'facilitymanager.urls'
 
 CORS_ALLOWED_ORIGINS = [
-    'https://admin.rentings.me'
+    'https://admin.rentings.me',
     'http://localhost:5173',
     'http://localhost:5174',
 ]
