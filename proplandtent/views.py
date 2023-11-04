@@ -1384,9 +1384,15 @@ def refresh_user_login(request):
         return Response(response_payload, 500)
 
 
+@api_view(['GET'])
+def health_check_api(request):
 
+    try:
 
-
+        return Response(200)
+    
+    except:
+        return Response(200)
 
 
 
