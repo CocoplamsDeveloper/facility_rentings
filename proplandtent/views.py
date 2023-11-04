@@ -1368,7 +1368,7 @@ def refresh_user_login(request):
 
     try:
         user_id = request.query_params['userId']
-        refresh_token_id = request.query['refreshTokenId']
+        refresh_token_id = request.query_params['refreshTokenId']
 
         data, status = return_accesstoken_from_refresh(refresh_token_id, user_id)
         if status:
