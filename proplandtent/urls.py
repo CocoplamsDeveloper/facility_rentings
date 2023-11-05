@@ -37,7 +37,11 @@ urlpatterns = [
     path('user/login', views.user_login),
     path('contract-doc/download', views.serve_contract_document),
     path('login/refresh', views.refresh_user_login),
-    path('', views.health_check_api)
+    path('', views.health_check_api),
+    path('property/search', views.search_properties),
+    path('unit/search', views.search_units),
+    path('tenant/search', views.search_tenants)
+
     # path('token/get', oauth2.testing_tokens),
     # path('token/test', oauth2.with_decorator)
 ]

@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.core import serializers
 from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry
+from propertyexpenses.models import Invoices, Status, Payments
 from django.middleware import csrf
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
@@ -813,43 +814,24 @@ def get_landlord_all_units(request):
         }
         return Response(response_payload, 500)
 
-@api_view(['POST'])
+@api_view(['GET'])
 def get_filtered_units(request):
     # api for filtered units data 
     try:
-        user_id = request.data['userId']
-        f_type = None
-        f_status = None
-        f_property = None
+        query_data = request.query_params
 
-        if 'unitTypeFilter' in request.data:
-            f_type = request.data['unitTypeFilter']
-        if 'unitStatusFilter' in request.data:
-            f_status = request.data['unitStatusFilter']
-        if 'unitPropertyFilter' in request.data:
-            f_property = request.data['unitPropertyFilter']
+        filter_statement = Q()
+        if 'type' in query_data.keys():
+            filter_statement &= Q(unit_type=query_data['type'])
+        if 'status' in query_data.keys():
+            filter_statement &= Q(unit_status = query_data['status'])
+        if 'property' in query_data.keys():
+            filter_statement &= Q(unit_property=query_data['property'])
+        if 'rent' in query_data.keys():
+            filter_statement &= Q(unit_rent=query_data['rent'])
 
 
-        if f_type != None and f_status != None and f_property != None:
-            filtered_data = Units.objects.filter(unit_type=f_type, unit_status=f_status, unit_property=f_property).values()
-
-        elif f_type != None and f_status != None and f_property == None:
-            filtered_data = Units.objects.filter(unit_type=f_type, unit_status=f_status).values()
-
-        elif f_type != None and f_property != None and f_status == None:
-            filtered_data = Units.objects.filter(unit_type=f_type, unit_property=f_property).values()
-
-        elif f_status != None and f_property != None and f_type == None:
-            filtered_data = Units.objects.filter(unit_status=f_status, unit_property=f_property).values()
-  
-        elif f_type != None and f_status == None and f_property == None:
-            filtered_data = Units.objects.filter(unit_type=f_type).values()
- 
-        elif f_type == None and f_property != None and f_status == None:
-            filtered_data = Units.objects.filter(unit_property=f_property).values()
-
-        elif f_status != None and f_property == None and f_type == None:
-            filtered_data = Units.objects.filter(unit_status=f_status).values()
+        filtered_data = Units.objects.filter(filter_statement).values()
 
 
         filtered_arr = []
@@ -1394,14 +1376,87 @@ def health_check_api(request):
     except:
         return Response(200)
 
+@api_view(['GET'])
+@is_authorized
+def search_properties(request):
 
+    try:
+        search_param = request.query_params['searchParam']
+        searched_data = Property.objects.filter(property_name__icontains = search_param).values()
+        response_payload = {
+            "message" : "fetched",
+            "result" : searched_data
+        }
+        return Response(response_payload, 200)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
 
+@api_view(['GET'])
+@is_authorized
+def search_units(request):
 
+    try:
+        search_unit_params = request.query_params['searchParam']
+        searched_data = Units.objects.filter(unit_name__icontains = search_unit_params).values()
+        response_payload = {
+            "message" : "fetched",
+            "result" : searched_data 
+        }  
+        return Response(response_payload, 200)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__ 
+        }
+        return Response(response_payload, 500)
 
+@api_view(['GET'])
+def search_tenants(request):
 
+    try:
+        query_data = request.query_params['searchParam']
+        searched_results = UserRegistry.objects.filter(user_fullname__icontains=query_data).exclude(user_role__in=[1,2]).values()
 
+        response_payload = {
+            "message" : "fetched",
+            "result" : searched_results
+        }
+        return Response(response_payload, 200)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__ 
+        }
+        return Response(response_payload, 500)
 
+@api_view(['GET'])
+def filter_tenants(request):
 
+    try:
+        
+        query_data = request.query_params
+        filter_statement = Q()
+        if "firstName" in query_data.keys():
+            filter_statement &= Q(user_firstname = query_data['firstName'])
+        if "lastName" in query_data.keys():
+            filter_statement &= Q(user_lastname = query_data['lastName'])
+        if "phone" in query_data.keys():
+            filter_statement &= Q(user_contact_number = query_data['phone'])
+        if "nationality" in query_data.keys():
+            filter_statement &= Q(user_nationality=query_data['nationality'])
+        if "status" in query_data.keys():
+            filter_statement &= Q(user_status=query_data['status'])
+
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
 
 
 
