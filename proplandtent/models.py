@@ -1,9 +1,20 @@
 from django.db import models
-
 # Create your models here.
+class Status(models.Model):
+
+    status_id = models.BigAutoField(primary_key=True, unique=True)
+    status_type = models.CharField(default=None)
+    status_type_id = models.BigIntegerField(default=0)
+    status = models.CharField(default="None")
+
 class Role(models.Model):
     role_id = models.BigAutoField(primary_key=True, unique=True)
     role_name = models.CharField(max_length=100)
+
+class PayTypes(models.Model):
+    paytype_id = models.BigAutoField(primary_key=True, unique=True)
+    paytype_name = models.CharField(max_length=1000)
+
 
 #Users table
 class UserRegistry(models.Model):
@@ -76,8 +87,10 @@ class TenancyLease(models.Model):
     lease_price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     tenancy_start_date = models.DateField()
     tenancy_end_date = models.DateField()
-    tenancy_agreement = models.FileField(upload_to='contract_documents')
-    tenancy_status = models.CharField(max_length=150, default="inactive")
+    status = models.ForeignKey(Status, null=True, blank=True, on_delete=models.CASCADE)
+    deposit_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+
 
 class RefreshTokenRegistry(models.Model):
 
@@ -90,3 +103,49 @@ class RefreshTokenRegistry(models.Model):
     scope = models.CharField()
     status = models.CharField()
 
+# class PropertyImages(models.Model):
+
+#     image_id = models.BigAutoField(primary_key=True, unique=True)
+#     image_property = models.ForeignKey(Property, null=True, blank=True, on_delete=models.CASCADE)
+#     image_name = models.CharField(max_length=1000)
+#     image = models.ImageField(upload_to="property_images")
+
+# class PropertyDocuments(models.Model):
+
+#     document_id = models.BigAutoField(primary_key=True, unique=True)
+#     document_property = models.ForeignKey(Property, null=True, blank=True, on_delete=models.CASCADE)
+#     document_name = models.CharField(max_length=1000)
+#     document = models.FileField(upload_to="property_documents")
+
+class tenancyDocuments(models.Model):
+
+    document_id = models.BigAutoField(primary_key=True, unique=True)
+    document_related_to = models.ForeignKey(TenancyLease, null=True, blank=True, on_delete=models.CASCADE)
+    document_name = models.CharField(max_length=1000)
+    document = models.FileField(upload_to="tenancy_documents")
+
+# class UserDocuments(models.Model):
+
+#     document_id = models.BigAutoField(primary_key=True, unique=True)
+#     document_user = models.ForeignKey(UserRegistry, null=True, blank=True, on_delete=models.CASCADE)
+#     document_name = models.CharField(max_length=1000)
+#     document = models.FileField(upload_to="user_documents")
+
+class Invoices(models.Model):
+
+    invoice_id = models.BigAutoField(primary_key=True, unique=True)
+    invoice_name = models.CharField(max_length=1000)
+    tenancy_id = models.ForeignKey(TenancyLease,blank=True, null=True, on_delete=models.CASCADE)
+    status = models.ForeignKey(Status, blank=True, null=True, on_delete=models.CASCADE)
+    invoice_amount = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    remarks = models.CharField(max_length=1000, default="None")
+    payment_type = models.ForeignKey(PayTypes, blank=True, null=True, on_delete=models.CASCADE)
+    payment_date = models.DateField()
+    created_by = models.ForeignKey(UserRegistry,blank=True, null=True, on_delete=models.CASCADE, related_name="+")
+    created_on = models.DateTimeField()
+    discount = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    water_amount = models.BooleanField(default=False)
+    telephone_amount = models.BooleanField(default=False)
+    electricity_amount = models.BooleanField(default=False)
+    internet_connection = models.BooleanField(default=False)
+    tenant_id = models.ForeignKey(UserRegistry, blank=True, null=True, on_delete=models.CASCADE)

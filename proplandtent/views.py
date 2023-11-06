@@ -2,8 +2,8 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.core import serializers
-from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry
-from propertyexpenses.models import Invoices, Status, Payments
+from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes
+# from propertyexpenses.models import Invoices, Status, Payments
 from django.middleware import csrf
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
@@ -12,7 +12,7 @@ from .decorators import is_authorized, is_admin, is_landlord, is_tenant
 from .oauth2 import create_tokens, return_accesstoken_from_refresh
 from django.conf import settings
 from facilitymanager.settings import ACCESS_TOKEN_LIFETIME, ALGORITHM, REFRESH_TOKEN_LIFETIME
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import pandas as pd
 import traceback
 import requests
@@ -27,6 +27,12 @@ available_roles = {
     "landlord" : 2,
     "tenant" : 3
 }
+
+available_payment_types = {
+    "cash" : 1,
+    "cheque": 2,
+    "online" : 3
+}
 cookie_max_age = 3600*24*7
 
 # logic functions 
@@ -35,19 +41,6 @@ cookie_max_age = 3600*24*7
 def get_tenant_tenancy_data(tenant_id):
 
     try:
-
-        # return_dict = {
-        # "propertyId" : "--",
-        # "tenantRent" : "--",
-        # "ContractStartDate" : "--",
-        # "ContractEndDate" : "--",
-        # "tenancyContractId" : "--",
-        # "unitId": "--",
-        # "unitName" : "--",
-        # "unitFloor" : "--",
-        # "tenancyStatus": "--",
-        # "contractDoc": "--"
-        # }
         temp = []
         if TenancyLease.objects.filter(tenant_id=tenant_id).exists():
 
@@ -63,13 +56,7 @@ def get_tenant_tenancy_data(tenant_id):
                     d['unitFloor'] = unit.unit_floor
                 
                 temp.append(d)
-            # return_dict["propertyId"] = tenancy.property_id.property_id
-            # return_dict["tenantRent"] = tenancy.monthly_rent
-            # return_dict["ContractStartDate"] = tenancy.tenancy_start_date
-            # return_dict["ContractEndDate"] = tenancy.tenancy_end_date
-            # return_dict["tenancyContractId"] = tenancy.tenancy_id
-            # return_dict["tenancyStatus"] = tenancy.tenancy_status
-            # return_dict["contractDoc"] = str(tenancy.tenancy_agreement)
+
         return temp
     except:
         traceback.print_exc()
@@ -1012,11 +999,11 @@ def get_property_units(request):
 
 
 @api_view(['POST'])
-@is_authorized
 def create_tenancy_record(request):
     # api for tenancy record creation
     try:
-        recieved_data = json.loads(request.data['tenancyData'])
+        recieved_data = request.data['tenancyData']
+        # print("assign units api",request.data)
         recieved_file = None
         if 'contractDoc' in request.data.keys():
             recieved_file = request.data['contractDoc']
@@ -1026,41 +1013,120 @@ def create_tenancy_record(request):
         tenant_id = recieved_data['tenantId']
         unit_id = recieved_data['unitId']
 
+        contract_start = recieved_data['startDate']
+        contract_end = recieved_data['endDate']
+
         if TenancyLease.objects.filter(unit_id=unit_id).exists():
             response_payload = {
                 "message" : "Unit already in existing contract!"
             }
             return Response(response_payload, 400)
 
-                
+
+        contract_time = recieved_data['contractPeriod']
+
+        start_date, end_date = contract_start, contract_end
+        dtrange = pd.date_range(start=start_date, end=end_date, freq='d')
+        months = pd.Series(dtrange .month)
+        starts= months.ne(months.shift(1))
+
+        df = pd.DataFrame([dtrange[starts].strftime('%Y-%m-%d')])
+        invoice_dates_list = df.values.tolist()[0]
+        print(invoice_dates_list)
+
         record = TenancyLease.objects.create(
             property_id = Property.objects.get(property_id=property_id),
             unit_id = Units.objects.get(unit_id=unit_id),
             tenant_id = UserRegistry.objects.get(user_id=tenant_id),
-            monthly_rent = recieved_data['tenancyRent'],
+            monthly_rent = recieved_data['rent'],
             tenancy_start_date = recieved_data['startDate'],
             tenancy_end_date = recieved_data['endDate'],
-            tenancy_status = "active",
+            deposit_amount = recieved_data['depositAmount'],
         )
         if record: 
-            Units.objects.filter(unit_id=unit_id).update(unit_occupied_by=tenant_id, unit_status="occupied", unit_rent=recieved_data['tenancyRent'])
+            Units.objects.filter(unit_id=unit_id).update(unit_occupied_by=tenant_id, unit_status="occupied", unit_rent=recieved_data['rent'])
             prop = Property.objects.get(property_id=property_id)
-            prop.tenants.add(UserRegistry.objects.get(user_id=tenant_id))        
-        if recieved_file is not None and record:
-            tc = TenancyLease.objects.get(tenancy_id=record.tenancy_id)
-            tc.tenancy_agreement = recieved_file
-            tc.save()
+            prop.tenants.add(UserRegistry.objects.get(user_id=tenant_id))
 
-        response_payload = {
-            "message" : "tenancy created successfully",
-            "tenancyId" : record.tenancy_id
-        }
+            created_status = Status.objects.create(
+                status_type = "tenancy",
+                status_type_id = record.tenancy_id,
+                status = "active"
+            )
+
+            if created_status:
+
+                TenancyLease.objects.filter(tenancy_id=record.tenancy_id).update(status=Status.objects.get(status_id=created_status.status_id))
+
+                if int(recieved_data['depositAmount']) > 0:
+                    advance_invoice = Invoices.objects.create(
+                        invoice_name = "advance invoice",
+                        tenancy_id = TenancyLease.objects.get(tenancy_id=record.tenancy_id),
+                        invoice_amount = recieved_data['depositAmount'],
+                        payment_type = PayTypes.objects.get(paytype_id=available_payment_types[recieved_data['paymentMode']]),
+                        payment_date = invoice_dates_list[0],
+                        created_by = UserRegistry.objects.get(user_id=user_id),
+                        created_on = datetime.utcnow(),
+                        tenant_id = UserRegistry.objects.get(user_id=tenant_id),
+                        water_amount = recieved_data['water'],
+                        electricity_amount = recieved_data['electricity'],
+                        telephone_amount = recieved_data['telephone'],
+                        internet_connection = recieved_data['internet']
+                    )
+
+                    if advance_invoice:
+                        status_record = Status.objects.create(
+                        status_type = "invoice",
+                        status_type_id = advance_invoice.invoice_id,
+                        status = "Due"
+                        )
+                        if status_record:
+                            Invoices.objects.filter(invoice_id=advance_invoice.invoice_id).update(status=Status.objects.get(status_id=status_record.status_id))
+                for date in invoice_dates_list:
+
+                    invoice = Invoices.objects.create(
+                        invoice_name = "rent invoice",
+                        tenancy_id = TenancyLease.objects.get(tenancy_id=record.tenancy_id),
+                        invoice_amount = recieved_data['rent'],
+                        payment_type = PayTypes.objects.get(paytype_id=available_payment_types[recieved_data['paymentMode']]),
+                        payment_date = date,
+                        created_by = UserRegistry.objects.get(user_id=user_id),
+                        created_on = datetime.utcnow(),
+                        discount = recieved_data['discountAmount'],
+                        tenant_id = UserRegistry.objects.get(user_id=tenant_id),
+                        water_amount = recieved_data['water'],
+                        electricity_amount = recieved_data['electricity'],
+                        telephone_amount = recieved_data['telephone'],
+                        internet_connection = recieved_data['internet']
+                    )
+
+                    if invoice:
+                        status_record = Status.objects.create(
+                        status_type = "invoice",
+                        status_type_id = invoice.invoice_id,
+                        status = "Due"
+                        )
+                        if status_record:
+                            Invoices.objects.filter(invoice_id=invoice.invoice_id).update(status=Status.objects.get(status_id=status_record.status_id))          
+
+
+            if recieved_file is not None and record:
+                tenancyDocuments.objects.create(
+                    document_name = "tenancy contract",
+                    document_related_to = TenancyLease.objects.get(tenant_id=record.tenancy_id),
+                    document = recieved_file
+                )
+
+            response_payload = {
+                "message" : "tenancy created successfully",
+                "tenancyId" : record.tenancy_id
+            }
 
         return Response(response_payload, 201)
-    except:
+    except Exception as err:
         traceback.print_exc()
         response_payload = {
-            "message" : "server error"
+            "message" : type(err).__name__
         }
         return Response(response_payload, 500)
     
@@ -1421,9 +1487,24 @@ def search_tenants(request):
         query_data = request.query_params['searchParam']
         searched_results = UserRegistry.objects.filter(user_fullname__icontains=query_data).exclude(user_role__in=[1,2]).values()
 
+        tenants_with_tenancy = []
+        for tenant in searched_results:
+            tenancy_data = get_tenant_tenancy_data(tenant['user_id'])
+            if len(tenancy_data) == 0:
+                tenants_with_tenancy.append({
+                    "tenant" : tenant,
+                    "tenancy" : []
+                })
+            else:
+                for i in tenancy_data:
+                    tenants_with_tenancy.append({
+                        "tenant" : tenant,
+                        "tenancy" : i
+                    })
+
         response_payload = {
             "message" : "fetched",
-            "result" : searched_results
+            "result" : tenants_with_tenancy
         }
         return Response(response_payload, 200)
     except Exception as err:
@@ -1441,16 +1522,32 @@ def filter_tenants(request):
         query_data = request.query_params
         filter_statement = Q()
         if "firstName" in query_data.keys():
-            filter_statement &= Q(user_firstname = query_data['firstName'])
+            filter_statement &= Q(user_firstname__icontains = query_data['firstName'])
         if "lastName" in query_data.keys():
-            filter_statement &= Q(user_lastname = query_data['lastName'])
+            filter_statement &= Q(user_lastname__icontains = query_data['lastName'])
         if "phone" in query_data.keys():
-            filter_statement &= Q(user_contact_number = query_data['phone'])
+            filter_statement &= Q(user_contact_number__icontains = query_data['phone'])
         if "nationality" in query_data.keys():
-            filter_statement &= Q(user_nationality=query_data['nationality'])
+            filter_statement &= Q(user_nationality__icontains = query_data['nationality'])
         if "status" in query_data.keys():
-            filter_statement &= Q(user_status=query_data['status'])
+            filter_statement &= Q(user_status__icontains = query_data['status'])
 
+        tenants_results = UserRegistry.objects.filter(filter_statement).exclude(user_role__in = [1, 2]).values()
+        tenants_with_tenancy = []
+        for tenant in tenants_results:
+            tenancy_data = get_tenant_tenancy_data(tenant['user_id'])
+            if len(tenancy_data) == 0:
+                tenants_with_tenancy.append({
+                    "tenant" : tenant,
+                    "tenancy" : []
+                })
+            else:
+                for i in tenancy_data:
+                    tenants_with_tenancy.append({
+                        "tenant" : tenant,
+                        "tenancy" : i
+                    })
+        return Response({"data" : tenants_with_tenancy},200)
     except Exception as err:
         traceback.print_exc()
         response_payload = {

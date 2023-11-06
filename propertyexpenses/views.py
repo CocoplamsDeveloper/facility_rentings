@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.core import serializers
 from proplandtent.models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry
-from .models import Invoices
+# from .models import Invoices
 from django.middleware import csrf
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q

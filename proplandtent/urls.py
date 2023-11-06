@@ -40,7 +40,8 @@ urlpatterns = [
     path('', views.health_check_api),
     path('property/search', views.search_properties),
     path('unit/search', views.search_units),
-    path('tenant/search', views.search_tenants)
+    path('tenant/search', views.search_tenants),
+    path('tenants/filter', views.filter_tenants)
 
     # path('token/get', oauth2.testing_tokens),
     # path('token/test', oauth2.with_decorator)
