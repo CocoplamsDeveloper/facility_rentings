@@ -802,6 +802,7 @@ def get_landlord_all_units(request):
         return Response(response_payload, 500)
 
 @api_view(['GET'])
+@is_authorized
 def get_filtered_units(request):
     # api for filtered units data 
     try:
@@ -999,6 +1000,7 @@ def get_property_units(request):
 
 
 @api_view(['POST'])
+@is_authorized
 def create_tenancy_record(request):
     # api for tenancy record creation
     try:
@@ -1481,6 +1483,7 @@ def search_units(request):
         return Response(response_payload, 500)
 
 @api_view(['GET'])
+@is_authorized
 def search_tenants(request):
 
     try:
@@ -1515,6 +1518,7 @@ def search_tenants(request):
         return Response(response_payload, 500)
 
 @api_view(['GET'])
+@is_authorized
 def filter_tenants(request):
 
     try:
