@@ -412,7 +412,8 @@ def create_properties(request):
             )
             response_payload = {
                 "message" : "Property Added Successfully!",
-                "propertyId" : prop.property_id
+                "propertyId" : prop.property_id,
+                "propertyName" : prop.property_name
             }
             return Response(response_payload, 201)
         else:
@@ -761,6 +762,7 @@ def get_landlord_all_units(request):
     try:
         user_id = request.query_params['userId']
         units_to_send = []
+        rent_list = []
 
         if UserRegistry.objects.filter(user_id = user_id).exists():
 
@@ -781,10 +783,12 @@ def get_landlord_all_units(request):
                         "unitId" : unit['pk'],
                         "unitsData" : unit['fields']
                     })
+                    rent_list.append(float(unit['fields']['unit_rent']))
 
             response_payload = {
                 "message" : "fetched successfully",
-                "unitsData" : units_to_send
+                "unitsData" : units_to_send,
+                "currentMaxRent" : max(rent_list)
             }
 
             return Response(response_payload, 200)
@@ -816,7 +820,7 @@ def get_filtered_units(request):
         if 'property' in query_data.keys():
             filter_statement &= Q(unit_property=query_data['property'])
         if 'rent' in query_data.keys():
-            filter_statement &= Q(unit_rent=query_data['rent'])
+            filter_statement &= Q(unit_rent__lte=query_data['rent'])
 
 
         filtered_data = Units.objects.filter(filter_statement).values()
@@ -1449,11 +1453,21 @@ def health_check_api(request):
 def search_properties(request):
 
     try:
+        user_id = request.query_params['userId']
         search_param = request.query_params['searchParam']
-        searched_data = Property.objects.filter(property_name__icontains = search_param).values()
+        searched_data = Property.objects.filter(owned_by=user_id, property_name__icontains = search_param).order_by('property_id')
+        searched_data = json.loads(serializers.serialize('json', searched_data))
+
+        properties = []
+
+        for p in searched_data:
+            properties.append({
+                "propertyId" : p['pk'],
+                "details" : p['fields']
+            })
         response_payload = {
             "message" : "fetched",
-            "result" : searched_data
+            "result" : properties
         }
         return Response(response_payload, 200)
     except Exception as err:
@@ -1468,11 +1482,23 @@ def search_properties(request):
 def search_units(request):
 
     try:
+        user_id = request.query_params['userId']
         search_unit_params = request.query_params['searchParam']
-        searched_data = Units.objects.filter(unit_name__icontains = search_unit_params).values()
+        unitsto_send = []
+        landlord_properties = Property.objects.filter(owned_by = user_id).values_list('property_id', 'property_name')[::1]
+        for prop in landlord_properties:
+            units = Units.objects.filter(unit_name__icontains = search_unit_params, unit_property=prop[0])
+            units = json.loads(serializers.serialize('json', units))
+            for unit in units:
+                unitsto_send.append({
+                    "propertyId" : prop[0],
+                    "propertyName" : prop[1],
+                    "unitId" : unit['pk'],
+                    "unitsData" : unit['fields']
+                })
         response_payload = {
             "message" : "fetched",
-            "result" : searched_data 
+            "result" : unitsto_send
         }  
         return Response(response_payload, 200)
     except Exception as err:
@@ -1488,7 +1514,10 @@ def search_tenants(request):
 
     try:
         query_data = request.query_params['searchParam']
-        searched_results = UserRegistry.objects.filter(user_fullname__icontains=query_data).exclude(user_role__in=[1,2]).values()
+        filter_statement = Q()
+        filter_statement |= Q(user_fullname__icontains=query_data)
+        filter_statement |= Q(user_contact_number__icontains=query_data)
+        searched_results = UserRegistry.objects.filter(filter_statement).exclude(user_role__in=[1,2]).values()
 
         tenants_with_tenancy = []
         for tenant in searched_results:
@@ -1525,12 +1554,7 @@ def filter_tenants(request):
         
         query_data = request.query_params
         filter_statement = Q()
-        if "firstName" in query_data.keys():
-            filter_statement &= Q(user_firstname__icontains = query_data['firstName'])
-        if "lastName" in query_data.keys():
-            filter_statement &= Q(user_lastname__icontains = query_data['lastName'])
-        if "phone" in query_data.keys():
-            filter_statement &= Q(user_contact_number__icontains = query_data['phone'])
+
         if "nationality" in query_data.keys():
             filter_statement &= Q(user_nationality__icontains = query_data['nationality'])
         if "status" in query_data.keys():

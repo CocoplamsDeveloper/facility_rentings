@@ -124,7 +124,7 @@ def return_accesstoken_from_refresh(refreshTokenId, user_id):
 
     try:
 
-        refresh_token = RefreshTokenRegistry.objects.get(token_id=refreshTokenId)
+        refresh_token = RefreshTokenRegistry.objects.get(id=refreshTokenId)
         user_role = refresh_token.role
         message, code = verify_tokens(refresh_token.token, user_role)
         if code ==  401 or code == 403:
@@ -132,7 +132,7 @@ def return_accesstoken_from_refresh(refreshTokenId, user_id):
 
         else:
             access_token = create_access_token(user_id)
-            RefreshTokenRegistry.objects.filter(token_id=refreshTokenId).update(status="revoked", updated_on = datetime.utcnow())
+            RefreshTokenRegistry.objects.filter(id=refreshTokenId).update(status="revoked", updated_on = datetime.utcnow())
 
             d = {
                 "accessToken" : access_token,
