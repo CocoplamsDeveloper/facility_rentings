@@ -5,6 +5,7 @@ from django.core import serializers
 from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes
 # from propertyexpenses.models import Invoices, Status, Payments
 from django.middleware import csrf
+from django.db.models import Max
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
 from django.http import HttpResponse
@@ -523,7 +524,7 @@ def get_landlord_properties_data(request):
 
         if UserRegistry.objects.filter(user_id = landlord_id).exists():
 
-            properties_data = Property.objects.filter(owned_by=landlord_id).order_by('property_id')
+            properties_data = Property.objects.filter(owned_by=landlord_id).exclude(deletedby_user=True).order_by('property_id')
             properties_data = serializers.serialize('json', properties_data)
             properties_data = json.loads(properties_data)
 
@@ -1163,10 +1164,12 @@ def get_tenants_data(request):
                         "tenant" : t,
                         "tenancy" : i
                     })
-
+        
+        max_tenancy_rent = TenancyLease.objects.aggregate(Max('monthly_rent')).get('monthly_rent__max')
         response_payload = {
             "message" : "fetched successfully",
-            "tenantsData" : tenants_with_tenancy
+            "tenantsData" : tenants_with_tenancy,
+            "tenancyMaxRent" : max_tenancy_rent
         }
         return Response(response_payload, 200)
     except:
@@ -1555,11 +1558,26 @@ def filter_tenants(request):
         query_data = request.query_params
         filter_statement = Q()
 
+        if "property" in query_data.keys() and "floor" not in query_data.keys():
+            filter_statement &= Q(user_id__in=TenancyLease.objects.filter(property_id=query_data['property']).values_list('tenant_id', flat=True)[::1])
+        if "property" and "unit" and "floor" in query_data.keys():
+            filter_statement &= Q(user_id__in=TenancyLease.objects.filter(property_id=query_data['property'], unit_id=query_data['unit']).values_list('tenant_id', flat=True)[::1])
+        if "floor" in query_data.keys() and "property" in query_data.keys() and "unit" not in query_data.keys():
+            unit_ids = Units.objects.filter(unit_floor=query_data['floor']).values_list('unit_id', flat=True)[::1]
+            filter_statement &= Q(user_id__in=TenancyLease.objects.filter(property_id=query_data['property'], unit_id__in=unit_ids).values_list('tenant_id', flat=True)[::1])
         if "nationality" in query_data.keys():
-            filter_statement &= Q(user_nationality__icontains = query_data['nationality'])
+            filter_statement &= Q(user_nationality=query_data['nationality'])
         if "status" in query_data.keys():
-            filter_statement &= Q(user_status__icontains = query_data['status'])
-
+            filter_statement &= Q(user_status = query_data['status'])
+        if "startDate" in query_data.keys():
+            start_dates = query_data['startDate'].split('to')
+            filter_statement &= Q(user_id__in=TenancyLease.objects.filter(tenancy_start_date__range=(str(start_dates[0].strip()), str(start_dates[1].strip()))).values_list('tenant_id', flat=True)[::1])
+        if "endDate" in query_data.keys():
+            end_dates = query_data['endDate'].split('to')
+            filter_statement &= Q(user_id__in=TenancyLease.objects.filter(tenancy_end_date__range=(str(end_dates[0].strip()), str(end_dates[1].strip()))).values_list('tenant_id', flat=True)[::1])
+        if "rent" in query_data.keys():
+            filter_statement &= Q(user_id__in=TenancyLease.objects.filter(monthly_rent__lte=query_data['rent']).values_list('tenant_id', flat=True)[::1])
+        
         tenants_results = UserRegistry.objects.filter(filter_statement).exclude(user_role__in = [1, 2]).values()
         tenants_with_tenancy = []
         for tenant in tenants_results:
@@ -1575,7 +1593,12 @@ def filter_tenants(request):
                         "tenant" : tenant,
                         "tenancy" : i
                     })
-        return Response({"data" : tenants_with_tenancy},200)
+
+        response_payload = {
+            "message" : "fetched",
+            "result" : tenants_with_tenancy
+        }
+        return Response(response_payload, 200)
     except Exception as err:
         traceback.print_exc()
         response_payload = {
