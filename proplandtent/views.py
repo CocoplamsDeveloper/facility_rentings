@@ -481,7 +481,7 @@ def landlord_property_list(request):
 
         landlord_id = request.query_params['userId']
 
-        properties = Property.objects.filter(owned_by=landlord_id).order_by("property_id").values_list('property_id', 'property_name', 'property_type', 'floors')[::1]
+        properties = Property.objects.filter(owned_by=landlord_id).exclude(deletedby_user=True).order_by("property_id").values_list('property_id', 'property_name', 'property_type', 'floors')[::1]
         property_data = []
         if len(properties) == 0:
             response_payload = {
@@ -558,6 +558,39 @@ def get_landlord_properties_data(request):
             'message' : "server error",
         }
         return Response(response_payload, 500)
+    
+
+
+@api_view(['DELETE'])
+@is_authorized
+def soft_delete_property(request):
+
+    try:
+        user_property_id = request.query_params['propertyId']
+
+        if Property.objects.filter(property_id=user_property_id).exists():
+            Property.objects.filter(property_id = user_property_id).update(deletedby_user=True)
+        
+            response_payload = {
+                "message" : "Property Deleted Successfully",
+                "propertyId": user_property_id
+            }
+            return Response(response_payload, 200)
+        else:
+            response_payload = {
+                "message" : "Property Not found",
+                "propertyId": user_property_id
+            }
+            return Response(response_payload, 400)
+
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
+
+
     
 @api_view(['POST'])
 @is_authorized
