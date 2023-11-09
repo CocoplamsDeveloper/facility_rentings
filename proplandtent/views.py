@@ -649,10 +649,12 @@ def get_units_from_csv(request):
     # api to save units data into db from csv/excel file
     try:
         data = json.loads(request.data['data'])
+        skipped = False
         landlord_id = data['userId'],
         property_id = data['propertyId'],
         property_id = int(property_id[0])
         csv_file = request.FILES['unitscsvfile']
+        property_floor = Property.objects.get(property_id=property_id).floors
 
         FileSystemStorage(location='media').save(csv_file.name, csv_file)
         file_type = csv_file.name
@@ -677,24 +679,27 @@ def get_units_from_csv(request):
         if Property.objects.filter(property_id=property_id).exists():
             if len(data_to_send) > 0:
                 for unit in data_to_send:
-                    unit_beds = unit['Unit Bedrooms']
-                    unit_baths = unit['Unit Bathrooms']
-                    if unit['Unit Bedrooms'] == "other":
-                        unit_beds = 0
-                    elif type(unit['Unit Bedrooms']) == str:
-                        unit_beds = int(unit['Unit Bedrooms'])
-                    if type(unit['Unit Bathrooms']) == str:
-                        unit_baths = 0
+                    if type(unit['Unit Bedrooms']) != int:
+                        skipped=True
+                    if type(unit['Unit Bathrooms']) != int:
+                        skipped=True
+                    if type(unit['Unit Rent']) != int or type(unit['Unit Rent']) != float:
+                        skipped = True
+                    if unit['floor'] > property_floor or type(unit['floor']) != int:
+                        skipped = True
+
+                    if skipped:
+                        continue
                     Units.objects.create(
                         unit_property = Property.objects.get(property_id=property_id),
                         unit_name =  unit['Unit Name/Number'],
                         unit_type = unit['Unit Type'],
                         unit_rent = unit['Unit Rent'],
-                        unit_bedrooms = unit_beds,
-                        unit_bathrooms_nos = unit_baths,
+                        unit_bedrooms = unit['Unit Bedrooms'],
+                        unit_bathrooms_nos = unit['Unit Bathrooms'],
                         area_insqmts = unit['Unit Size'],
                         unit_status = unit['Status'],
-                        unit_occupied_by= UserRegistry.objects.get(tenant_id=2)
+                        unit_floors=unit['floor']
                     )
 
                 os.remove(f'media\{csv_file.name}')
@@ -740,7 +745,7 @@ def update_properties(request):
                 property_name = updation_data['propertyName'],
                 property_type = updation_data['propertyType'],
                 owned_by = UserRegistry.objects.get(user_id=user_id),
-                governate = updation_data['governateName'],
+                governate = updation_data['propertyCountry'],
                 Street=updation_data['propertyStreet'],
                 City=updation_data['propertyCity'],
                 Block=updation_data['propertyBlock'],
@@ -780,10 +785,10 @@ def update_properties(request):
                 'message' :  'User does not exist'
             }
             return Response(response_payload, 401)
-    except:
+    except Exception as err:
         traceback.print_exc()
         response_payload = {
-            'message' : "server error",
+            'message' : type(err).__name__,
         }
         return Response(response_payload, 500)
 
