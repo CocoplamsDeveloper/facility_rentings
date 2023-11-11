@@ -645,15 +645,15 @@ def add_units(request):
 
 
 @api_view(['POST'])
+@is_authorized
 def get_units_from_csv(request):
     # api to save units data into db from csv/excel file
     try:
-        data = json.loads(request.data['data'])
+        data = request.data
         skipped = False
         landlord_id = data['userId'],
-        property_id = data['propertyId'],
-        property_id = int(property_id[0])
-        csv_file = request.FILES['unitscsvfile']
+        property_id = data['propertyId']
+        csv_file = data['unitscsvfile']
         property_floor = Property.objects.get(property_id=property_id).floors
 
         FileSystemStorage(location='media').save(csv_file.name, csv_file)
@@ -683,9 +683,9 @@ def get_units_from_csv(request):
                         skipped=True
                     if type(unit['Unit Bathrooms']) != int:
                         skipped=True
-                    if type(unit['Unit Rent']) != int or type(unit['Unit Rent']) != float:
+                    if type(unit['Unit Rent']) == str:
                         skipped = True
-                    if unit['floor'] > property_floor or type(unit['floor']) != int:
+                    if unit['Unit floors'] > property_floor or type(unit['Unit floors']) != int:
                         skipped = True
 
                     if skipped:
@@ -699,12 +699,18 @@ def get_units_from_csv(request):
                         unit_bathrooms_nos = unit['Unit Bathrooms'],
                         area_insqmts = unit['Unit Size'],
                         unit_status = unit['Status'],
-                        unit_floors=unit['floor']
+                        unit_floor=unit['Unit floors']
                     )
 
                 os.remove(f'media\{csv_file.name}')
+
+                response_message = ''
+                if skipped:
+                    response_message = "Incorrect data entered for some units!"
+                else:
+                    response_message = "Units data updated"
                 response_payload = {
-                    "message" : "Units Data updated!"
+                    "message" : response_message
                 }
                 return Response(response_payload, 200)
             else:
