@@ -1,7 +1,8 @@
 from django.db import models
 # Create your models here.
 class Status(models.Model):
-
+    # status type is Model name
+    # status type id is the model record id(FK)
     status_id = models.BigAutoField(primary_key=True, unique=True)
     status_type = models.CharField(default=None)
     status_type_id = models.BigIntegerField(default=0)
@@ -26,11 +27,26 @@ class UserRegistry(models.Model):
     user_email = models.EmailField()
     user_nationality = models.CharField(max_length=100)
     user_role = models.ForeignKey(Role, on_delete=models.CASCADE)
-    user_status = models.CharField(max_length=100, default="active")
+    status = models.ForeignKey('Status', null=True, blank=True, on_delete=models.CASCADE)
     user_password = models.CharField(max_length = 150, default="abc123")
-    user_document = models.FileField(upload_to="user_documents", default=None)
-    user_image = models.ImageField(upload_to="user_images", default=None)
     id_number = models.CharField(max_length=200, default="None")
+
+
+class Landlord(models.Model):
+
+    landlord_id = models.BigAutoField(primary_key=True, unique=True)
+    landlord_name = models.CharField(max_length=1000)
+    user_id = models.ForeignKey("UserRegistry", null=True, blank=True, on_delete=models.CASCADE)
+    company_name = models.CharField(max_length=1000)
+    contact_name = models.CharField(max_length=1000)
+    contact_number = models.BigIntegerField(default=0)
+    email = models.EmailField()
+    password = models.CharField(max_length=1000)
+    address = models.JSONField(default=dict)
+    remarks = models.CharField(max_length=1000)
+    landlord_type = models.CharField(max_length=200)
+    VAT_id = models.BigIntegerField(default=0)
+    bank_account_details = models.JSONField(default=dict)
 
 #property table
 class Property(models.Model):
@@ -124,12 +140,13 @@ class tenancyDocuments(models.Model):
     document_name = models.CharField(max_length=1000)
     document = models.FileField(upload_to="tenancy_documents")
 
-# class UserDocuments(models.Model):
+class UserDocuments(models.Model):
 
-#     document_id = models.BigAutoField(primary_key=True, unique=True)
-#     document_user = models.ForeignKey(UserRegistry, null=True, blank=True, on_delete=models.CASCADE)
-#     document_name = models.CharField(max_length=1000)
-#     document = models.FileField(upload_to="user_documents")
+    document_id = models.BigAutoField(primary_key=True, unique=True)
+    document_user = models.ForeignKey(UserRegistry, null=True, blank=True, on_delete=models.CASCADE)
+    document_name = models.CharField(max_length=1000)
+    document = models.FileField(upload_to="user_documents")
+    image = models.ImageField(upload_to="user_images")
 
 class Invoices(models.Model):
 

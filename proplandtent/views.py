@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.core import serializers
-from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes
+from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments
 # from propertyexpenses.models import Invoices, Status, Payments
 from django.middleware import csrf
 from django.db.models import Max
@@ -293,7 +293,7 @@ def user_logout(request):
         if 'tokenId' in request.query_params.keys():
             token_id = request.query_params['tokenId']
         if UserRegistry.objects.filter(user_id=user_id).exists():
-            UserRegistry.objects.filter(user_id=user_id).update(user_status = "loggedout")
+            # UserRegistry.objects.filter(user_id=user_id).update(user_status = "loggedout")
 
             if token_id is not None:
                 if RefreshTokenRegistry.objects.filter(id=token_id).exists():
@@ -1651,10 +1651,121 @@ def filter_tenants(request):
         return Response(response_payload, 500)
 
 
+@api_view(['POST'])
+@is_authorized
+def create_landlords(request):
+
+    try:
+        request_data = request.data
+        user_id = request.data['userId']
+        landlord_details = json.loads(request.data['userData'])
+        user_image = None
+        user_company_logo = None
+        user_document = None
 
 
+        if "userImage" in request_data.keys():
+            user_image = request_data['userImage']
+        if "userCompanyLogo" in request_data.keys():
+            user_company_logo = request_data['userCompanyLogo']
+        if "userDocument" in request_data.keys():
+            user_document  = request_data['userDocument']
 
 
+        user = UserRegistry.objects.create(
+            user_firstname = landlord_details['firstName'],
+            user_lastname = landlord_details['lastName'],
+            user_fullname = landlord_details['firstName'] + " " + landlord_details['lastName'],
+            user_contact_number = landlord_details['contactNumber'],
+            user_email = landlord_details['email'],
+            user_nationality = landlord_details['nationality'],
+            user_role = Role.objects.get(role_id=available_roles['landlord']),
+            user_password = landlord_details['password']
+        )
+
+        if user.user_id:
+            u1 = UserRegistry.objects.get(user_id=user.user_id)
+            ld_obj = Landlord.objects.create(
+                landlord_name = landlord_details['firstName'] + " " + landlord_details['lastName'],
+                user_id = u1,
+                contact_number = landlord_details['contactNumber'],
+                email = landlord_details['email'],
+                address = landlord_details['landlordAddress'],
+                password = landlord_details['password'],
+                bank_account_details = {"name" :landlord_details['bankName'], "account_no": landlord_details['bankAccountNo'], "iban_no": landlord_details['bankIbanNo']},
+                landlord_type = landlord_details['type'],
+                company_name = landlord_details['landlordCompanyName'],
+                contact_name = landlord_details['landlordContactPerson']
+            )
+
+            if user_image is not None:
+                UserDocuments.objects.create(
+                    document_name = "user/landlord Image",
+                    document_user = u1,
+                    image = user_image
+                )
+
+            if user_company_logo is not None:
+                UserDocuments.objects.create(
+                    document_name = "landlord company logo",
+                    document_user = u1,
+                    image = user_company_logo
+                )
+
+            if user_document is not None:
+                UserDocuments.objects.create(
+                    document_name = "landlord document",
+                    document_user = u1,
+                    image = user_document
+                )
+            
+            
+            if ld_obj.landlord_id:
+                l1 = Landlord.objects.get(landlord_id=ld_obj.landlord_id)
+
+                if landlord_details['vatId'] != '':
+                    l1.VAT_id=landlord_details['vatId']
+                    l1.save()
+                if landlord_details['comments'] != '':
+                    l1.remarks = landlord_details['comments']
+                    l1.save()
+
+            
+                stat = Status.objects.create(
+                    status_type = "UserRegistry",
+                    status_type_id = user.user_id,
+                    status = landlord_details['status']
+                )
+
+                u1.status = Status.objects.get(status_id=stat.status_id)
+                u1.save()
+
+        if user and ld_obj:
+            response_payload = {
+                "message" : "landlord added successfully"
+            }
+            return Response(response_payload, 201)
+
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message": type(err).__name__
+        }
+        return Response(response_payload, 500)
+
+@api_view(['GET'])
+def get_landlords_details(request):
+
+    try:
+
+
+        pass
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message": type(err).__name__
+        }
+        return Response(response_payload, 500)
 
 
 
