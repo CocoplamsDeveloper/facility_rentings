@@ -1757,9 +1757,15 @@ def create_landlords(request):
 def get_landlords_details(request):
 
     try:
+        user_id = request.query_params['userId']
+        # user_data = UserRegistry.objects.filter(user_role=2).values()
+        # for user in user_data:
+        arr = Landlord.objects.filter(landlord_id=2).select_related('UserRegistry').values()
 
+        return Response({'data' : arr}, 200)
 
-        pass
+        
+        
     except Exception as err:
         traceback.print_exc()
         response_payload = {
