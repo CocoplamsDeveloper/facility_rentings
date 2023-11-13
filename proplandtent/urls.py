@@ -45,6 +45,7 @@ urlpatterns = [
     path('tenants/filter', views.filter_tenants),
     path('landlord/create', views.create_landlords),
     path('landlords/get', views.get_landlords_details),
+    path('landlord-page/stats', views.get_landlord_page_statistics)
 
     # path('token/get', oauth2.testing_tokens),
     # path('token/test', oauth2.with_decorator)

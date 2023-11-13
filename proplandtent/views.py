@@ -1695,7 +1695,9 @@ def create_landlords(request):
                 bank_account_details = {"name" :landlord_details['bankName'], "account_no": landlord_details['bankAccountNo'], "iban_no": landlord_details['bankIbanNo']},
                 landlord_type = landlord_details['type'],
                 company_name = landlord_details['landlordCompanyName'],
-                contact_name = landlord_details['landlordContactPerson']
+                contact_name = landlord_details['landlordContactPerson'],
+                nationality=landlord_details['nationality'],
+                charges = landlord_details['landlordCharges']
             )
 
             if user_image is not None:
@@ -1754,18 +1756,36 @@ def create_landlords(request):
         return Response(response_payload, 500)
 
 @api_view(['GET'])
+@is_authorized
 def get_landlords_details(request):
 
     try:
         user_id = request.query_params['userId']
-        # user_data = UserRegistry.objects.filter(user_role=2).values()
-        # for user in user_data:
-        arr = Landlord.objects.filter(landlord_id=2).select_related('UserRegistry').values()
+        user_ids = UserRegistry.objects.filter(user_role=2).values_list('user_id', 'status')[::1]
+        arr = []
+        for user in user_ids:
 
-        return Response({'data' : arr}, 200)
+            data = {}
+            ld_qs = Landlord.objects.filter(user_id=user[0])
+            if ld_qs:
+                ld = json.loads(serializers.serialize('json', ld_qs))
+                data['landlordId'] = ld[0]['pk']
+                data['landlordDetails'] = ld[0]['fields']
+                data['documents']= UserDocuments.objects.filter(document_user=user[0]).values(),
+                data['propertyNos'] = Property.objects.filter(owned_by=user[0]).count(),
 
-        
-        
+                if user[1] == None:
+                    pass
+                else:
+                    data["status"] = Status.objects.get(status_id=user[1]).status
+
+                arr.append(data)
+
+        response_payload = {
+            "message" : "fetched successfully",
+            "landlordData" : arr
+        }
+        return Response(response_payload, 200)
     except Exception as err:
         traceback.print_exc()
         response_payload = {
@@ -1774,20 +1794,45 @@ def get_landlords_details(request):
         return Response(response_payload, 500)
 
 
+@api_view(['GET'])
+def get_landlord_page_statistics(request):
 
+    try:
+        user_id = request.query_params['userId']
+        nos_of_landlords = Landlord.objects.filter(created_by=user_id).count()
+        user_statuses = UserRegistry.objects.filter(user_role=2).values_list('status', flat=True)[::1]
+        status_count = 0
+        units_count = 0
+        for stat in user_statuses:
+            if stat == None:
+                continue
+            user_status = Status.objects.get(status_id=stat).status
+            if user_status == "Active":
+                status_count += 1
 
+        property_count = Property.objects.filter(owned_by=user_id).count()
+        all_property_ids = Property.objects.filter(owned_by=user_id).values_list('property_id', flat=True)[::1]
+        for p in all_property_ids:
+            units_count += Units.objects.filter(unit_property=p).count()
 
-
-
-
-
-
-
-
-
-
-
-
+        data = {
+            "landlords" : nos_of_landlords,
+            "activeLandlords": status_count,
+            "properties" :property_count,
+            "units": units_count
+        }
+        
+        response_payload = {
+            "message" : "fetched successfully",
+            "pageData" : data
+        }
+        return Response(response_payload, 200)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
 
 
 

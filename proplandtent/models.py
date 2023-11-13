@@ -47,6 +47,9 @@ class Landlord(models.Model):
     landlord_type = models.CharField(max_length=200)
     VAT_id = models.BigIntegerField(default=0)
     bank_account_details = models.JSONField(default=dict)
+    nationality = models.CharField(max_length=500, default="None")
+    charges = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    created_by = models.BigIntegerField(default=0)  # this is logged in user's user id 
 
 #property table
 class Property(models.Model):
