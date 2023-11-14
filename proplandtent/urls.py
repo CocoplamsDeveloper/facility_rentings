@@ -11,6 +11,7 @@ urlpatterns = [
     path("property/<int:id>", views.get_property),
     path("tenancy/<int:id>", views.get_tenancy),
     path("units/<int:id>", views.get_units),
+    path("landlord/<int:id>", views.get_landlord),
     path("floors/units", views.get_unit_floor_wise),
     path("addrole/", views.add_roles),
     path("user/logout", views.user_logout),
@@ -45,7 +46,8 @@ urlpatterns = [
     path('tenants/filter', views.filter_tenants),
     path('landlord/create', views.create_landlords),
     path('landlords/get', views.get_landlords_details),
-    path('landlord-page/stats', views.get_landlord_page_statistics)
+    path('landlord-page/stats', views.get_landlord_page_statistics),
+    # path('landlord/update', views.update_landlord)
 
     # path('token/get', oauth2.testing_tokens),
     # path('token/test', oauth2.with_decorator)

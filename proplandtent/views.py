@@ -136,6 +136,47 @@ def get_property(request, id):
         }
         return Response(response_payload, 500)
     
+
+@api_view(['GET'])
+def get_landlord(request, id):
+
+    try:
+        user_id = request.query_params['userId']
+        landlord_id = id
+
+        if Landlord.objects.filter(landlord_id=landlord_id).exists():
+
+            ld = Landlord.objects.filter(landlord_id=landlord_id)
+            ld = json.loads(serializers.serialize('json', ld))
+            ld_user_id = ld[0]['fields']['user_id']
+            status_obj = UserRegistry.objects.get(user_id=ld_user_id).status
+            d = {}
+            d['landlordId'] = ld[0]['pk']
+            d['details'] = ld[0]['fields']
+            d['documents'] = UserDocuments.objects.filter(document_user=ld_user_id).values()
+            d['status'] = Status.objects.get(status_id=status_obj.status_id).status
+
+            response_payload = {
+                "message" : "fetched successfully",
+                "landlord" : d
+            }
+
+            return Response(response_payload, 200)
+        else:
+            response_payload = {
+                "message" : "record not found",
+                "landlord" : {}
+            }
+
+            return Response(response_payload, 400)
+        
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
+    
 @api_view(['GET'])
 # @is_authorized
 def get_tenant(request, id):
@@ -1697,7 +1738,6 @@ def create_landlords(request):
                 company_name = landlord_details['landlordCompanyName'],
                 contact_name = landlord_details['landlordContactPerson'],
                 nationality=landlord_details['nationality'],
-                charges = landlord_details['landlordCharges']
             )
 
             if user_image is not None:
@@ -1718,7 +1758,7 @@ def create_landlords(request):
                 UserDocuments.objects.create(
                     document_name = "landlord document",
                     document_user = u1,
-                    image = user_document
+                    document = user_document
                 )
             
             
@@ -1756,7 +1796,6 @@ def create_landlords(request):
         return Response(response_payload, 500)
 
 @api_view(['GET'])
-@is_authorized
 def get_landlords_details(request):
 
     try:
@@ -1835,7 +1874,93 @@ def get_landlord_page_statistics(request):
         return Response(response_payload, 500)
 
 
+# @api_view(['POST'])
+# def update_landlord(request):
 
+#     try:
+#         data = request.data
+#         print(request.data)
+        # landlord_details = data['landlordData']
+        # ld_id = landlord_details['landlordId']
+        # ld_user = landlord_details['userId']
+        # landlord_image = None
+        # landlord_logo = None
+        # landlord_document = None
+
+        # if "landlordImage" in data.keys():
+        #     landlord_image = data['landlordImage']
+        # if "landlordLogo" in data.keys():
+        #     landlord_logo = data['landlordLogo']
+        # if "landlordDocument" in data.keys():
+        #     landlord_document = data['landlordDocument']
+
+
+        # if Landlord.objects.filter(landlord_id=ld_id).exists():
+
+        #     user_updated = UserRegistry.objects.filter(user_id=ld_user).update(
+        #     user_firstname = landlord_details['firstName'],
+        #     user_lastname = landlord_details['lastName'],
+        #     user_fullname = landlord_details['firstName'] + " " + landlord_details['lastName'],
+        #     user_contact_number = landlord_details['contactNumber'],
+        #     user_email = landlord_details['email'],
+        #     user_nationality = landlord_details['nationality'],
+        #     user_password = landlord_details['password']
+        #     )
+
+        #     if user_updated:
+        #         u1 = UserRegistry.objects.get(user_id=ld_user)
+        #         ld_obj = Landlord.objects.create(
+        #             landlord_name = landlord_details['firstName'] + " " + landlord_details['lastName'],
+        #             contact_number = landlord_details['contactNumber'],
+        #             email = landlord_details['email'],
+        #             address = landlord_details['landlordAddress'],
+        #             password = landlord_details['password'],
+        #             bank_account_details = {"name" :landlord_details['bankName'], "account_no": landlord_details['bankAccountNo'], "iban_no": landlord_details['bankIbanNo']},
+        #             landlord_type = landlord_details['type'],
+        #             company_name = landlord_details['landlordCompanyName'],
+        #             contact_name = landlord_details['landlordContactPerson'],
+        #             nationality=landlord_details['nationality'],
+        #         )
+
+        #         added_docs = UserDocuments.objects.filter(document_user=ld_user).values_list("document_id", "document_name")[::1]
+        #         for doc in added_docs:
+        #             docs = UserDocuments.objects.get(document_id=doc[0])
+        #             if landlord_image is not None and doc[1] == "user\landlord Image":
+        #                 if docs.image != '':
+        #                     if os.path.exists(docs.image.path):
+        #                         os.remove(docs.image.path)
+        #                 docs.image = landlord_image
+        #                 docs.save()
+        #             if landlord_logo is not None and doc[1] == "landlord company logo":
+        #                 if docs.image != '':
+        #                     if os.path.exists(docs.image.path):
+        #                         os.remove(docs.image.path)
+        #                 docs.image =landlord_logo
+        #                 docs.save()
+        #             if landlord_document is not None and doc[1] == "landlord document":
+        #                 if docs.document != '':
+        #                     if os.path.exists(docs.document.path):
+        #                         os.remove(docs.document.path)
+        #                 docs.image = landlord_document
+        #                 docs.save()
+
+        #         Status.objects.filter(status_id=u1.status).update(status=landlord_details['status'])
+        # response_payload = {
+        #     "message" : "landlord updated successfully",
+        #     "landlordId" : "id"
+        # }
+        # return Response(response_payload, 200)
+        # else:
+        #     response_payload = {
+        #         "message" : "landlord not found!",
+        #         "landlordId" : ld_id
+        #     }
+        #     return Response(response_payload, 400)
+    # except Exception as err:
+    #     traceback.print_exc()
+    #     response_payload = {
+    #         "message" : type(err).__name__
+    #     }
 
 
 
