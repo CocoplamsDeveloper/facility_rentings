@@ -144,12 +144,13 @@ def get_landlord(request, id):
         user_id = request.query_params['userId']
         landlord_id = id
 
-        if Landlord.objects.filter(landlord_id=landlord_id).exists():
+        if Landlord.objects.filter(user_id=landlord_id).exists():
 
-            ld = Landlord.objects.filter(landlord_id=landlord_id)
+            ld = Landlord.objects.filter(user_id=landlord_id)
             ld = json.loads(serializers.serialize('json', ld))
             ld_user_id = ld[0]['fields']['user_id']
-            status_obj = UserRegistry.objects.get(user_id=ld_user_id).status
+            status_obj = UserRegistry.objects.get(user_id=id).status
+            print(status_obj)
             d = {}
             d['landlordId'] = ld[0]['pk']
             d['details'] = ld[0]['fields']
