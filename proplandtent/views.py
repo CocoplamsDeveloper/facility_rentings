@@ -1920,12 +1920,9 @@ def update_landlord(request):
 
                 )
 
-                if ld_obj.landlord_id:
-                    l1 = Landlord.objects.get(landlord_id=ld_obj.landlord_id)
 
-                    if landlord_details['vatId'] != '':
-                        l1.VAT_id=landlord_details['vatId']
-                        l1.save()
+                if landlord_details['vatId'] != '':
+                    Landlord.objects.filter(landlord_id=ld_id).update(VAT_id=landlord_details['vatId'])
 
 
                 added_docs = UserDocuments.objects.filter(document_user=ld_user).values_list("document_id", "document_name")[::1]
@@ -1957,6 +1954,7 @@ def update_landlord(request):
         }
 
 @api_view(['GET'])
+@is_authorized
 def get_landlord_documents(request):
 
     try:
@@ -1976,3 +1974,86 @@ def get_landlord_documents(request):
         response_payload = {
             "message" : type(err).__name__
         }
+
+
+@api_view(['POST'])
+@is_authorized
+def add_document(request):
+
+    try:
+        user_id = request.data['userId']
+        document_name = request.data['documentName']
+        document_type = request.data['documentType']
+        document = request.data['document']
+
+        if document_type == "Image":
+            added = UserDocuments.objects.create(
+                document_user = UserRegistry.objects.get(user_id=user_id),
+                document_name = document_name,
+                image = document
+            )
+        else:
+            added = UserDocuments.objects.create(
+                document_user = UserRegistry.objects.get(user_id=user_id),
+                document_name = document_name,
+                document = document
+            )
+
+        if added:
+            response_payload = {
+                "message" : "Document added successfully",
+                "documentId" : added.document_id
+            }
+            return Response(response_payload, 201)
+        else:
+            response_payload = {
+                "message" : "Document Not added",
+            }
+            return Response(response_payload, 400)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
+    
+
+@api_view(['GET'])
+@is_authorized
+def download_document(request):
+
+    try:
+        document_id = request.query_params['documentId']
+
+        if UserDocuments.objects.filter(document_id=document_id).exists():
+
+            document = UserDocuments.objects.get(document_id=document_id)
+            if document.image:
+                
+                file = str(document.image)
+                file_name = file.split('/')[1]
+                file_ext = file_name.split('.')
+                response = HttpResponse(document.image, content_type=f'image/{file_ext[1]}')
+                response['Content-Disposition'] = f'attachment; filename={file_name}'
+
+                return response
+            if document.document:
+
+                file = str(document.document)
+                file_name = file.split('/')[1]
+                file_ext = file_name.split('.')
+                response = HttpResponse(document.document, content_type=f'image/{file_ext[1]}')
+                response['Content-Disposition'] = f'attachment; filename={file_name}'
+
+                return response
+        else:
+            response_payload = {
+                "message" : "document not found!"
+            }
+            return Response(response_payload, 400)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
