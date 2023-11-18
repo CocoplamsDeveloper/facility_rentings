@@ -49,7 +49,11 @@ class Landlord(models.Model):
     bank_account_details = models.JSONField(default=dict)
     nationality = models.CharField(max_length=500, default="None")
     charges = models.DecimalField(max_digits=15, decimal_places=3, default=0)
-    created_by = models.BigIntegerField(default=0)  # this is logged in user's user id 
+    created_by = models.BigIntegerField(default=0)  # this is logged in user's user id
+    subscription_start_date = models.DateTimeField(null=True, default=None)
+    subscription_end_date = models.DateTimeField(null=True, default=None)
+    time_period_year = models.BigIntegerField(default=0, null=True)
+    time_period_months = models.BigIntegerField(default=0, null=True) 
 
 #property table
 class Property(models.Model):
@@ -64,12 +68,10 @@ class Property(models.Model):
     Street = models.CharField(default=None, max_length=300)
     Block = models.CharField(default=None, max_length=300)
     property_number = models.CharField(default=0)
-    parking_areas = models.IntegerField(default=1)
     property_civil_id = models.CharField(default="Not specified", max_length=200, null=True)
     underground_floors = models.IntegerField(default=1)
     units_per_floor = models.IntegerField(default=1)
-    units_numbers_start_range = models.IntegerField(default=0)
-    bathrooms_per_unit = models.IntegerField(default=1)
+    total_units = models.IntegerField(default=0)
     area_insqmtrs = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     units_details = models.JSONField(default=dict)
     address = models.JSONField(default=dict)
@@ -80,6 +82,16 @@ class Property(models.Model):
     property_description = models.TextField(max_length=500, default=None, null=True)
     built_year = models.IntegerField(default=0000)
     deletedby_user = models.BooleanField(default=False)
+    zip_code = models.BigIntegerField(default=0)
+    construction_cost = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+
+class Facilities(models.Model):
+
+    facility_id = models.BigAutoField(primary_key=True, unique=True)
+    property_id = models.ForeignKey("Property", null=True, blank=True, on_delete=models.CASCADE)
+    name = models.CharField(max_length=500)
+    included = models.BooleanField(default=False)
+    facility_cost = models.DecimalField(max_digits=15, decimal_places=3, default=0)
 
 
 class Units(models.Model):
@@ -122,19 +134,13 @@ class RefreshTokenRegistry(models.Model):
     scope = models.CharField()
     status = models.CharField()
 
-# class PropertyImages(models.Model):
+class PropertyDocuments(models.Model):
 
-#     image_id = models.BigAutoField(primary_key=True, unique=True)
-#     image_property = models.ForeignKey(Property, null=True, blank=True, on_delete=models.CASCADE)
-#     image_name = models.CharField(max_length=1000)
-#     image = models.ImageField(upload_to="property_images")
-
-# class PropertyDocuments(models.Model):
-
-#     document_id = models.BigAutoField(primary_key=True, unique=True)
-#     document_property = models.ForeignKey(Property, null=True, blank=True, on_delete=models.CASCADE)
-#     document_name = models.CharField(max_length=1000)
-#     document = models.FileField(upload_to="property_documents")
+    document_id = models.BigAutoField(primary_key=True, unique=True)
+    document_property = models.ForeignKey(Property, null=True, blank=True, on_delete=models.CASCADE)
+    document_name = models.CharField(max_length=1000)
+    image = models.ImageField(upload_to="property_images")
+    document = models.FileField(upload_to="property_documents")
 
 class tenancyDocuments(models.Model):
 
