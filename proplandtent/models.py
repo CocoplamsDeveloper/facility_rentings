@@ -53,7 +53,9 @@ class Landlord(models.Model):
     subscription_start_date = models.DateTimeField(null=True, default=None)
     subscription_end_date = models.DateTimeField(null=True, default=None)
     time_period_year = models.BigIntegerField(default=0, null=True)
-    time_period_months = models.BigIntegerField(default=0, null=True) 
+    time_period_months = models.BigIntegerField(default=0, null=True)
+    country = models.CharField(max_length=1000, default=None, null=True)
+    zipcode = models.BigIntegerField(default=0) 
 
 #property table
 class Property(models.Model):
@@ -84,11 +86,13 @@ class Property(models.Model):
     deletedby_user = models.BooleanField(default=False)
     zip_code = models.BigIntegerField(default=0)
     construction_cost = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    facilities_available = models.ManyToManyField("Facilities", related_name="properties")
+    rentType = models.CharField(null=True, default=None)
 
 class Facilities(models.Model):
 
     facility_id = models.BigAutoField(primary_key=True, unique=True)
-    property_id = models.ForeignKey("Property", null=True, blank=True, on_delete=models.CASCADE)
+    added_by = models.ForeignKey('UserRegistry', null=True, blank=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=500)
     included = models.BooleanField(default=False)
     facility_cost = models.DecimalField(max_digits=15, decimal_places=3, default=0)

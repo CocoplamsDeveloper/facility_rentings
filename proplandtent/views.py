@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.core import serializers
-from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments
+from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments, Facilities
 # from propertyexpenses.models import Invoices, Status, Payments
 from django.middleware import csrf
 from django.db.models import Max
@@ -2051,6 +2051,58 @@ def download_document(request):
                 "message" : "document not found!"
             }
             return Response(response_payload, 400)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
+    
+@api_view(['POST'])
+@is_authorized
+def add_facility(request):
+    try:
+        req_data = request.data
+        user_id = req_data['userId']
+        facs = req_data['facility']
+        fac_id = Facilities.objects.create(
+            name = facs['name'],
+            included = facs['included'],
+            facility_cost = facs['cost'],
+            added_by = UserRegistry.objects.get(user_id=user_id)
+        )
+
+        if fac_id.facility_id:
+            response_payload = {
+                "message" : "facility record added"
+            }
+            return Response(response_payload, 201)
+        else:
+            response_payload = {
+                "message" : "record not added!"
+            }
+            return Response(response_payload, 400)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
+    
+
+@api_view(['GET'])
+@is_authorized
+def get_facilities(request):
+
+    try:
+        user_id = request.query_params['userId']
+        facilities = Facilities.objects.filter(added_by=user_id).values()
+
+        response_payload = {
+            "message" : "fetched successfully",
+            "facilities" : facilities
+        }
+        return Response(response_payload, 200)
     except Exception as err:
         traceback.print_exc()
         response_payload = {

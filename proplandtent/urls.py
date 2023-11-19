@@ -50,7 +50,9 @@ urlpatterns = [
     path('landlord/update', views.update_landlord),
     path('landlord/docs', views.get_landlord_documents),
     path('document/add', views.add_document),
-    path('document/download', views.download_document)
+    path('document/download', views.download_document),
+    path('facility/add', views.add_facility),
+    path('facility/get', views.get_facilities)
 
 
 
