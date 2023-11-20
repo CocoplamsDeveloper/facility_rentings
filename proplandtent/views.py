@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.core import serializers
-from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments, Facilities
+from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments, Facilities, PropertyDocuments
 # from propertyexpenses.models import Invoices, Status, Payments
 from django.middleware import csrf
 from django.db.models import Max
@@ -448,11 +448,21 @@ def create_properties(request):
                 City=property_data['propertyCity'],
                 Block=property_data['propertyBlock'],
                 property_number = property_data['propertyNumber'],
+                zip_code = property_data['propertyZipCode'],
                 area_insqmtrs = property_data['propertySize'],
-                property_status = property_data['propertyStatus'],
                 built_year = property_data['propertyBuiltYear'],
                 floors = property_data['propertyFloor']
             )
+
+            if prop.property_id:
+                stat = Status.objects.create(
+                    status_type = "Property",
+                    status_type_id = prop.property_id,
+                    status = property_data['propertyStatus']
+                )
+                if stat.status_id:
+                    Property.objects.filter(property_id=prop.property_id).update(status=Status.objects.get(status_id=stat.status_id))
+
             response_payload = {
                 "message" : "Property Added Successfully!",
                 "propertyId" : prop.property_id,
@@ -478,9 +488,12 @@ def add_property_additional_details(request):
     try:
         user_id = request.data['userId']
         additional_data = json.loads(request.data['data'])
-        property_image = request.data['imageFile']
+        property_image = None
+        if 'imageFile' in request.data.keys():
+            property_image = request.data['imageFile']
         property_id = int(additional_data['propertyId'])
 
+        facilities = additional_data['facilities']
         if not property_image:
             response_payload = {
                 "message" : "Image not found!",
@@ -491,13 +504,25 @@ def add_property_additional_details(request):
         if Property.objects.filter(property_id=property_id).exists():
 
             record = Property.objects.get(property_id=property_id)
-            record.property_civil_id = additional_data['propertyCivilId']
+            record.property_civil_id = additional_data['propertyLicenseNo']
             record.property_description = additional_data['propertyDescription']
             record.selling_price = float(additional_data['propertySaleValue'])
             record.buying_price = float(additional_data['propertyBuyValue'])
-            record.property_image = property_image
+            record.rentType = additional_data['rentType']
+            record.construction_cost = additional_data['constructionCost']
             record.save()
 
+            if property_image:
+                PropertyDocuments.objects.create(
+                    document_name = "property image",
+                    document_property = Property.objects.get(property_id=property_id),
+                    image = property_image
+                )
+            for f in facilities:
+                if f['options'][0]['checked']:
+                    record.facilities_available.add(Facilities.objects.get(facility_id=f['id']))
+            
+            
             response_payload = {
                 "message" : "details added successfully",
                 "propertyId" : property_id
@@ -575,7 +600,9 @@ def get_landlord_properties_data(request):
                 for prop in properties_data:
                     properties.append({
                         "propertyId" : prop['pk'],
-                        "details": prop['fields']
+                        "details": prop['fields'],
+                        "documents" : PropertyDocuments.objects.filter(document_property=prop['pk']).values(),
+                        'status': Status.objects.get(status_id=prop['fields']['status']).status
                     })
 
                 response_payload = {
@@ -2091,7 +2118,7 @@ def add_facility(request):
     
 
 @api_view(['GET'])
-@is_authorized
+# @is_authorized
 def get_facilities(request):
 
     try:
@@ -2109,3 +2136,17 @@ def get_facilities(request):
             "message" : type(err).__name__
         }
         return Response(response_payload, 500)
+    
+
+@api_view(['DELETE'])
+def del_props(request):
+
+    try:
+        props = Property.objects.filter(owned_by=request.query_params['userId']).values_list('property_id', flat=True)[::1]
+        for p in props:
+            Property.objects.get(property_id=p).delete()
+        
+        return Response(200)
+
+    except:
+        traceback.print_exc()

@@ -52,7 +52,8 @@ urlpatterns = [
     path('document/add', views.add_document),
     path('document/download', views.download_document),
     path('facility/add', views.add_facility),
-    path('facility/get', views.get_facilities)
+    path('facility/get', views.get_facilities),
+    path('prop-del', views.del_props)
 
 
 

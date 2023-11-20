@@ -62,7 +62,7 @@ class Property(models.Model):
     property_id = models.BigAutoField(primary_key=True, unique=True)
     property_name = models.CharField(max_length=250)
     property_type = models.CharField(max_length=250, default="residential")
-    owned_by = models.ForeignKey(UserRegistry, on_delete=models.CASCADE)
+    owned_by = models.ForeignKey(UserRegistry, null=True, blank=True, on_delete=models.CASCADE)
     tenants = models.ManyToManyField(UserRegistry,related_name="properties")
     floors = models.IntegerField(default=0)
     governate = models.CharField(default=None, max_length=300)
@@ -77,10 +77,8 @@ class Property(models.Model):
     area_insqmtrs = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     units_details = models.JSONField(default=dict)
     address = models.JSONField(default=dict)
-    property_image = models.ImageField(upload_to='property_images')
     selling_price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     buying_price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    property_status = models.CharField(default="inactive")
     property_description = models.TextField(max_length=500, default=None, null=True)
     built_year = models.IntegerField(default=0000)
     deletedby_user = models.BooleanField(default=False)
@@ -88,6 +86,7 @@ class Property(models.Model):
     construction_cost = models.DecimalField(max_digits=15, decimal_places=3, default=0)
     facilities_available = models.ManyToManyField("Facilities", related_name="properties")
     rentType = models.CharField(null=True, default=None)
+    status = models.ForeignKey('Status', null=True, blank=True, on_delete=models.CASCADE)
 
 class Facilities(models.Model):
 
@@ -100,7 +99,7 @@ class Facilities(models.Model):
 
 class Units(models.Model):
     unit_id = models.BigAutoField(primary_key=True,unique=True)
-    unit_property = models.ForeignKey(Property, on_delete=models.CASCADE)
+    unit_property = models.ForeignKey(Property, null=True, blank=True, on_delete=models.CASCADE)
     unit_name = models.CharField(max_length=100)
     unit_number = models.CharField(default="AB01")
     unit_type = models.CharField(default="other")
@@ -114,9 +113,9 @@ class Units(models.Model):
 
 class TenancyLease(models.Model):
     tenancy_id = models.BigAutoField(primary_key=True, unique=True)
-    property_id = models.ForeignKey(Property, on_delete=models.CASCADE)
-    unit_id = models.ForeignKey(Units, on_delete=models.CASCADE)
-    tenant_id = models.ForeignKey(UserRegistry, on_delete=models.CASCADE, default=2)
+    property_id = models.ForeignKey(Property, null=True, blank=True, on_delete=models.CASCADE)
+    unit_id = models.ForeignKey(Units, null=True, blank=True, on_delete=models.CASCADE)
+    tenant_id = models.ForeignKey(UserRegistry, null=True, blank=True, on_delete=models.CASCADE, default=2)
     monthly_rent = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     yearly_rent = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     lease_price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
