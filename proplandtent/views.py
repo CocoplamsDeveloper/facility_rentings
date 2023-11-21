@@ -807,8 +807,9 @@ def update_properties(request):
         user_id = request.data['userId']
         property_id = updation_data['propertyId']
         updated_image = None
+        facilities = json.loads(request.data['facilities'])
+
         if 'updatedImage' in request.data.keys():
-            print(request.data['updatedImage'])
             updated_image = request.data['updatedImage']
 
         if UserRegistry.objects.filter(user_id=user_id).exists():
@@ -860,8 +861,14 @@ def update_properties(request):
                         document_name = 'property image',
                         image = updated_image
                         )
-
-
+                print(facilities)
+                for f in facilities:
+                    f_obj = Facilities.objects.get(facility_id=f['id'])
+                    if not f['checked']:
+                        prop.facilities_available.remove(f_obj)
+                    if f['checked']:
+                        prop.facilities_available.add(f_obj)
+                        
                 response_payload = {
                     'message' : "property Updated Successfully",
                     'propertyId' : property_id,
