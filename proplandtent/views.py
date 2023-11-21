@@ -98,7 +98,7 @@ def get_user(request, id):
 
 
 @api_view(['GET'])
-@is_authorized
+# @is_authorized
 def get_property(request, id):
     # api to fetch single property with id
     try:
@@ -108,16 +108,16 @@ def get_property(request, id):
 
         user_id = request.query_params['userId']
         pid = id
+        data = {}
         if UserRegistry.objects.filter(user_id=user_id).exists():
             if Property.objects.filter(property_id=pid).exists():
-                property_data = Property.objects.filter(property_id=pid).values()
-
-                if len(property_data) > 1:
-                    response_payload = {"message": "Multiple properties with same ID"}
-                    return Response(response_payload, 400)
-
+                property_data = json.loads(serializers.serialize('json', Property.objects.filter(property_id=pid)))
+                data['propertyId'] = property_data[0]['pk']
+                data['details'] = property_data[0]['fields']
+                data['documents'] = PropertyDocuments.objects.filter(document_property=id).values()
+                data['status'] = Status.objects.get(status_id=property_data[0]['fields']['status']).status
                 response_payload = {
-                    "property_data" : property_data
+                    "property_data" : data
                 }
                 return Response(response_payload, 200)
 
@@ -519,7 +519,7 @@ def add_property_additional_details(request):
                     image = property_image
                 )
             for f in facilities:
-                if f['options'][0]['checked']:
+                if f['checked']:
                     record.facilities_available.add(Facilities.objects.get(facility_id=f['id']))
             
             
@@ -802,7 +802,6 @@ def get_units_from_csv(request):
 def update_properties(request):
     # api to update property data
     try:
-        print(request.data)
         updation_data = request.data['data']
         updation_data = json.loads(updation_data)
         user_id = request.data['userId']
@@ -824,25 +823,44 @@ def update_properties(request):
                 Street=updation_data['propertyStreet'],
                 City=updation_data['propertyCity'],
                 Block=updation_data['propertyBlock'],
-                property_civil_id = updation_data['propertyCivilId'],
+                property_civil_id = updation_data['propertyLicenseNo'],
                 property_number = updation_data['propertyNumber'],
                 area_insqmtrs = updation_data['propertySize'],
-                property_status = updation_data['propertyStatus'],
                 property_description = updation_data['propertyDescription'],
                 built_year = updation_data['propertyBuiltYear'],
                 selling_price = updation_data["propertySaleValue"],
-                buying_price = updation_data["propertyBuyValue"]
+                buying_price = updation_data["propertyBuyValue"],
+                zip_code = updation_data['propertyZipCode'],
+                construction_cost = updation_data['propertyConstructionCost'],
+                rentType = updation_data['propertyRentType']
                 )
+
+                prop = Property.objects.get(property_id=property_id)
+                Status.objects.filter(status_id=prop.status.status_id).update(status=updation_data['propertyStatus'])
+
 
                 if updated_image is not None:
 
-                    prop = Property.objects.get(property_id=property_id)
-                    print(prop.property_image)
-                    if prop.property_image != '':
-                        if os.path.exists(prop.property_image.path):
-                            os.remove(prop.property_image.path)
-                    prop.property_image = updated_image
-                    prop.save()
+                    documents = PropertyDocuments.objects.filter(document_property=prop.property_id).values_list('document_id', 'document_name')
+
+                    image_check = False
+                    for doc in documents:
+                        if doc[1] == "property image":
+                            image_check = True
+                            record = PropertyDocuments.objects.get(document_id=doc[0])
+                            if record.image != '':
+                                if os.path.exists(record.image.path):
+                                    os.remove(record.image.path)
+                            record.image = updated_image
+                            record.save()
+
+                    if not image_check:
+                        PropertyDocuments.objects.create(
+                        document_property=prop,
+                        document_name = 'property image',
+                        image = updated_image
+                        )
+
 
                 response_payload = {
                     'message' : "property Updated Successfully",
@@ -2142,10 +2160,12 @@ def get_facilities(request):
 def del_props(request):
 
     try:
-        props = Property.objects.filter(owned_by=request.query_params['userId']).values_list('property_id', flat=True)[::1]
-        for p in props:
-            Property.objects.get(property_id=p).delete()
-        
+        # props = Property.objects.filter(owned_by=request.query_params['userId']).values_list('property_id', flat=True)[::1]
+        # for p in props:
+        #     Property.objects.get(property_id=p).delete()
+        prop = Property.objects.get(property_id=49).status
+        print(prop.status_id)
+
         return Response(200)
 
     except:
