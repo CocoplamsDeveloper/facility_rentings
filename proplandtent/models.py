@@ -109,7 +109,9 @@ class Units(models.Model):
     unit_rent = models.DecimalField(default=0, max_digits=15, decimal_places=2)
     area_insqmts = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     unit_occupied_by = models.IntegerField(default=0)
-    unit_status = models.CharField(default="unoccupied", max_length=100)
+    unit_status = models.ForeignKey("Status", null=True, blank=True, on_delete=models.CASCADE)
+    unit_category = models.CharField(default=None, null=True, max_length=250)
+    unit_kitchens = models.IntegerField(default=0)
 
 class TenancyLease(models.Model):
     tenancy_id = models.BigAutoField(primary_key=True, unique=True)

@@ -53,7 +53,12 @@ urlpatterns = [
     path('document/download', views.download_document),
     path('facility/add', views.add_facility),
     path('facility/get', views.get_facilities),
-    path('prop-del', views.del_props)
+    # path('prop-del', views.del_props),
+    path('property/docs', views.property_documents),
+    path('prop-doc/add', views.add_property_document),
+    path('prop-doc/download', views.download_property_document),
+    path('property/stats', views.get_property_page_statistics)
+
 
 
 

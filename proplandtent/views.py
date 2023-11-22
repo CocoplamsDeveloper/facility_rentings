@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.core import serializers
 from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments, Facilities, PropertyDocuments
@@ -674,24 +675,32 @@ def add_units(request):
         
         if Property.objects.filter(property_id=property_id).exists():
             if len(units_data) > 0:
-                unit_beds = units_data['Unit Bedrooms']
-                unit_baths = units_data['Unit Bathrooms']
-                if units_data['Unit Bedrooms'] == "other":
+                unit_beds = units_data['Bedrooms']
+                unit_baths = units_data['Bathrooms']
+                if units_data['Bedrooms'] == "other":
                     unit_beds = 0
-                if units_data['Unit Bathrooms'] == "other":
+                if units_data['Bathrooms'] == "other":
                     unit_baths = 0
                 created_unit = Units.objects.create(
                     unit_property = Property.objects.get(property_id=property_id),
-                    unit_name =  units_data['Unit Name/Number'],
-                    unit_type = units_data['Unit Type'],
-                    unit_rent = units_data['Unit Rent'],
+                    unit_name =  units_data['Name'],
+                    unit_type = units_data['Type'],
+                    unit_rent = units_data['Rent'],
                     unit_bedrooms = int(unit_beds),
                     unit_bathrooms_nos = int(unit_baths),
-                    area_insqmts = units_data['Unit Size'],
-                    unit_status = units_data['Status'],
-                    unit_floor = units_data['Unit Floor']
+                    area_insqmts = units_data['Size'],
+                    unit_floor = units_data['Floor'],
+                    unit_category = units_data['Category'],
+                    unit_kitchens = units_data['Kitchens']
                 )
 
+                stat = Status.objects.create(
+                    status_type = "Units",
+                    status_type_id = created_unit.unit_id,
+                    status = units_data['Status'],
+                )
+
+                Units.objects.filter(unit_id=created_unit.unit_id).update(status=Status.objects.get(status_id=stat.status_id))   
                 response_payload = {
                     "message" : "Unit added successfully",
                     "unit_id" : created_unit.unit_id 
@@ -819,7 +828,6 @@ def update_properties(request):
                 Property.objects.filter(property_id=property_id).update(
                 property_name = updation_data['propertyName'],
                 property_type = updation_data['propertyType'],
-                owned_by = UserRegistry.objects.get(user_id=user_id),
                 governate = updation_data['propertyCountry'],
                 Street=updation_data['propertyStreet'],
                 City=updation_data['propertyCity'],
@@ -836,10 +844,11 @@ def update_properties(request):
                 rentType = updation_data['propertyRentType']
                 )
 
+
                 prop = Property.objects.get(property_id=property_id)
                 Status.objects.filter(status_id=prop.status.status_id).update(status=updation_data['propertyStatus'])
 
-
+                print("line 842", updated_image)
                 if updated_image is not None:
 
                     documents = PropertyDocuments.objects.filter(document_property=prop.property_id).values_list('document_id', 'document_name')
@@ -897,7 +906,7 @@ def update_properties(request):
 @is_authorized
 def get_landlord_all_units(request):
 
-    # api to get landlord all units
+    # api to get landlord's all units
     try:
         user_id = request.query_params['userId']
         units_to_send = []
@@ -905,7 +914,7 @@ def get_landlord_all_units(request):
 
         if UserRegistry.objects.filter(user_id = user_id).exists():
 
-            landlord_properties = Property.objects.filter(owned_by = user_id).values_list('property_id', 'property_name')[::1]
+            landlord_properties = Property.objects.filter(owned_by = user_id, deletedby_user=False).values_list('property_id', 'property_name')[::1]
             if len(landlord_properties) < 1:
                 response_payload = {
                     'message' : "No properties found",
@@ -927,8 +936,9 @@ def get_landlord_all_units(request):
             response_payload = {
                 "message" : "fetched successfully",
                 "unitsData" : units_to_send,
-                "currentMaxRent" : max(rent_list)
             }
+            if len(rent_list) > 0:
+                response_payload["currentMaxRent"] = max(rent_list)
 
             return Response(response_payload, 200)
         else:
@@ -1596,7 +1606,7 @@ def search_properties(request):
     try:
         user_id = request.query_params['userId']
         search_param = request.query_params['searchParam']
-        searched_data = Property.objects.filter(owned_by=user_id, property_name__icontains = search_param).order_by('property_id')
+        searched_data = Property.objects.filter(owned_by=user_id, property_name__icontains = search_param, deletedby_user=False).order_by('property_id')
         searched_data = json.loads(serializers.serialize('json', searched_data))
 
         properties = []
@@ -1604,7 +1614,9 @@ def search_properties(request):
         for p in searched_data:
             properties.append({
                 "propertyId" : p['pk'],
-                "details" : p['fields']
+                "details" : p['fields'],
+                "documents": PropertyDocuments.objects.filter(document_property=p['pk']).values(),
+                "status" : Status.objects.get(status_id=p['fields']['status']).status
             })
         response_payload = {
             "message" : "fetched",
@@ -2143,7 +2155,7 @@ def add_facility(request):
     
 
 @api_view(['GET'])
-# @is_authorized
+@is_authorized
 def get_facilities(request):
 
     try:
@@ -2163,17 +2175,148 @@ def get_facilities(request):
         return Response(response_payload, 500)
     
 
-@api_view(['DELETE'])
-def del_props(request):
+# @api_view(['DELETE'])
+# def del_props(request):
+
+#     try:
+#         # props = Property.objects.filter(owned_by=request.query_params['userId']).values_list('property_id', flat=True)[::1]
+#         # for p in props:
+#         #     Property.objects.get(property_id=p).delete()
+#         Units.objects.all().delete()
+
+#         return Response(200)
+
+#     except:
+#         traceback.print_exc()
+
+
+@api_view(['GET'])
+@is_authorized
+def property_documents(request):
+    try:
+
+        property_id = request.query_params['propertyId']
+        
+        documents_list = PropertyDocuments.objects.filter(document_property=property_id).values()
+        response_payload = {
+            "message": "fetched successfully",
+            "documents": documents_list
+        }
+        return Response(response_payload, 200)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
+    
+@api_view(['POST'])
+@is_authorized
+def add_property_document(request):
 
     try:
-        # props = Property.objects.filter(owned_by=request.query_params['userId']).values_list('property_id', flat=True)[::1]
-        # for p in props:
-        #     Property.objects.get(property_id=p).delete()
-        prop = Property.objects.get(property_id=49).status
-        print(prop.status_id)
+        req_data = request.data
+        user_id = req_data['userId']
+        property_id = req_data['propertyId']
+        document = req_data['document']
+        document_name = req_data['documentName']
+        document_type = req_data['documentType']
+        if document_type == "Image":
+            added = PropertyDocuments.objects.create(
+                document_property = Property.objects.get(property_id=property_id),
+                document_name = document_name,
+                image = document
+            )
+        else:
+            added = PropertyDocuments.objects.create(
+                document_property = Property.objects.get(property_id=property_id),
+                document_name = document_name,
+                document = document
+            )
 
-        return Response(200)
+        if added:
+            response_payload = {
+                "message" : "Document added successfully",
+                "documentId" : added.document_id
+            }
+            return Response(response_payload, 201)
 
-    except:
+    except Exception as err:
         traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
+
+@api_view(['GET'])
+@is_authorized
+def download_property_document(request):
+
+    try:
+        document_id = request.query_params['documentId']
+        
+        if PropertyDocuments.objects.filter(document_id=document_id).exists():
+
+            document = PropertyDocuments.objects.get(document_id=document_id)
+
+            if document.image:
+                
+                file = str(document.image)
+                file_name = file.split('/')[1]
+                file_ext = file_name.split('.')
+                response = HttpResponse(document.image, content_type=f'image/{file_ext[1]}')
+                response['Content-Disposition'] = f'attachment; filename={file_name}'
+
+                return response
+            if document.document:
+
+                file = str(document.document)
+                file_name = file.split('/')[1]
+                file_ext = file_name.split('.')
+                response = HttpResponse(document.document, content_type=f'image/{file_ext[1]}')
+                response['Content-Disposition'] = f'attachment; filename={file_name}'
+
+                return response
+        else:
+            response_payload = {
+                "message" : "document not found"
+            }
+            return Response(response_payload, 404)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
+    
+@api_view(['GET'])
+@is_authorized
+def get_property_page_statistics(request):
+
+    try:
+        user_id = request.query_params['userId']
+        properties_count = 0
+        units_count = 0
+        tenants_count = 0
+
+        properties = Property.objects.filter(owned_by=user_id, deletedby_user=False).values_list('property_id', flat=True)[::1]
+        properties_count = len(properties)
+        for p in properties:
+            units_count += Units.objects.filter(unit_property=p).count()
+
+
+        response_payload = {
+            "message": "fetched successfully",
+            "properties": properties_count,
+            "units": units_count,
+            "tenants": tenants_count
+        }
+        return Response(response_payload, 200)
+        
+
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
