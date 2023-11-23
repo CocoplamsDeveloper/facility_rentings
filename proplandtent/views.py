@@ -700,7 +700,7 @@ def add_units(request):
                     status = units_data['Status'],
                 )
 
-                Units.objects.filter(unit_id=created_unit.unit_id).update(status=Status.objects.get(status_id=stat.status_id))   
+                Units.objects.filter(unit_id=created_unit.unit_id).update(unit_status=Status.objects.get(status_id=stat.status_id))   
                 response_payload = {
                     "message" : "Unit added successfully",
                     "unit_id" : created_unit.unit_id 
@@ -922,14 +922,15 @@ def get_landlord_all_units(request):
                 }
                 return Response(response_payload, 400)
             for prop in landlord_properties:
-                units = Units.objects.filter(unit_property=prop[0])
+                units = Units.objects.filter(unit_property=prop[0], deletedby_user=False)
                 units = json.loads(serializers.serialize('json', units))
                 for unit in units:
                     units_to_send.append({
                         "propertyId" : prop[0],
                         "propertyName" : prop[1],
                         "unitId" : unit['pk'],
-                        "unitsData" : unit['fields']
+                        "unitsData" : unit['fields'],
+                        "status": Status.objects.get(status_id=unit['fields']['unit_status']).status
                     })
                     rent_list.append(float(unit['fields']['unit_rent']))
 
@@ -965,12 +966,13 @@ def get_filtered_units(request):
         if 'type' in query_data.keys():
             filter_statement &= Q(unit_type=query_data['type'])
         if 'status' in query_data.keys():
-            filter_statement &= Q(unit_status = query_data['status'])
+            filter_statement &= Q(unit_status = Status.objects.filter(query_data['status'])
         if 'property' in query_data.keys():
             filter_statement &= Q(unit_property=query_data['property'])
         if 'rent' in query_data.keys():
             filter_statement &= Q(unit_rent__lte=query_data['rent'])
-
+        
+        filter_statement &= Q(deletedby_user = False)
 
         filtered_data = Units.objects.filter(filter_statement).values()
 
@@ -981,7 +983,8 @@ def get_filtered_units(request):
                 "propertyId" : unit['unit_property_id'],
                 "propertyName" : Property.objects.get(property_id=unit['unit_property_id']).property_name,
                 "unitId" : unit['unit_id'],
-                "unitsData" : unit
+                "unitsData" : unit,
+                "status": Status.objects.get(status_id=unit['unit_status_id']).status
             })
         
         response_payload = {
@@ -998,28 +1001,33 @@ def get_filtered_units(request):
         return Response(response_payload, 500)
 
 @api_view(['POST'])
-def update_property_units(request):
+@is_authorized
+def update_units(request):
     #api for units updation
     try:
         user_id = request.data['userId']
-        updation_data = request.data['updatedData']
+        updation_data = request.data['updatedUnit']
 
         unit_id = updation_data['unitId']
         if Units.objects.filter(unit_id=unit_id).exists():
 
             update_prompt = Units.objects.filter(unit_id=unit_id).update(
-                unit_name=updation_data['unitName/Number'],
-                unit_type=updation_data['unitType'],
-                unit_bedrooms = updation_data['unitBedrooms'],
-                unit_bathrooms_nos = updation_data['unitBathrooms'],
-                area_insqmts =  updation_data['unitSize'],
-                unit_status = updation_data['unitStatus'],
-                unit_rent = updation_data['unitRent'],
+                unit_name=updation_data['name'],
+                unit_type=updation_data['type'],
+                unit_bedrooms = updation_data['bedrooms'],
+                unit_bathrooms_nos = updation_data['bathrooms'],
+                area_insqmts =  updation_data['size'],
+                unit_rent = updation_data['rent'],
+                unit_category = updation_data['category'],
+                unit_kitchens = updation_data['kitchens'],
             )
+
+            stat = Units.objects.get(unit_id=unit_id).unit_status
+            Status.objects.filter(status_id=stat.status_id).update(status=updation_data['status'])
 
             response_payload = {
                 "message"  : "Unit updated successfully",
-                "response_data" : {"unitId" : unit_id}
+                "unitId" : unit_id
             }
 
             return Response(response_payload, 200)
@@ -1038,35 +1046,27 @@ def update_property_units(request):
 
 
 @api_view(['DELETE'])
+@is_authorized
 def delete_units(request):
     # api for unit deletes
     try:
-        print(request.data)
-        user_id = request.data["userId"]
-        unit_id = request.data['unitId']
+        user_id = request.query_params["userId"]
+        unit_id = request.query_params['unitId']
 
-        if UserRegistry.objects.filter(landlord_id=user_id).exists():
+        if Units.objects.filter(unit_id=unit_id).exists():
 
-            if Units.objects.filter(unit_id=unit_id).exists():
-
-                Units.objects.get(unit_id=unit_id).delete()
-                response_payload = {
-                    "message" : "Unit Deleted successfully",
-                    "unitId" :  unit_id
-                }
-                return Response(response_payload, 200)
-            else:
-                response_payload = {
-                    "message" : "Unit Not found",
-                    "unitId" :  unit_id
-                }
-                return Response(response_payload, 400)
+            Units.objects.filter(unit_id=unit_id).update(deletedby_user=True)
+            response_payload = {
+                "message" : "Unit Deleted successfully",
+                "unitId" :  unit_id
+            }
+            return Response(response_payload, 200)
         else:
             response_payload = {
-                    "message" : "Invalid request",
-                    "unitId" :  unit_id
-                }
-            return Response(response_payload, 401)
+                "message" : "Unit Not found",
+                "unitId" :  unit_id
+            }
+            return Response(response_payload, 400)
     except:
         traceback.print_exc()
         response_payload = {
@@ -1638,16 +1638,17 @@ def search_units(request):
         user_id = request.query_params['userId']
         search_unit_params = request.query_params['searchParam']
         unitsto_send = []
-        landlord_properties = Property.objects.filter(owned_by = user_id).values_list('property_id', 'property_name')[::1]
+        landlord_properties = Property.objects.filter(owned_by = user_id, deletedby_user=False).values_list('property_id', 'property_name')[::1]
         for prop in landlord_properties:
-            units = Units.objects.filter(unit_name__icontains = search_unit_params, unit_property=prop[0])
+            units = Units.objects.filter(unit_name__icontains = search_unit_params, unit_property=prop[0], deletedby_user=False)
             units = json.loads(serializers.serialize('json', units))
             for unit in units:
                 unitsto_send.append({
                     "propertyId" : prop[0],
                     "propertyName" : prop[1],
                     "unitId" : unit['pk'],
-                    "unitsData" : unit['fields']
+                    "unitsData" : unit['fields'],
+                    "status": Status.objects.get(status_id=unit['fields']['unit_status']).status
                 })
         response_payload = {
             "message" : "fetched",
@@ -1916,10 +1917,10 @@ def get_landlord_page_statistics(request):
             if user_status == "Active":
                 status_count += 1
 
-        property_count = Property.objects.filter(owned_by=user_id).count()
-        all_property_ids = Property.objects.filter(owned_by=user_id).values_list('property_id', flat=True)[::1]
+        property_count = Property.objects.filter(owned_by=user_id, deletedby_user=False).count()
+        all_property_ids = Property.objects.filter(owned_by=user_id, deletedby_user=False).values_list('property_id', flat=True)[::1]
         for p in all_property_ids:
-            units_count += Units.objects.filter(unit_property=p).count()
+            units_count += Units.objects.filter(unit_property=p, deletedby_user=False).count()
 
         data = {
             "landlords" : nos_of_landlords,
@@ -2302,7 +2303,7 @@ def get_property_page_statistics(request):
         properties = Property.objects.filter(owned_by=user_id, deletedby_user=False).values_list('property_id', flat=True)[::1]
         properties_count = len(properties)
         for p in properties:
-            units_count += Units.objects.filter(unit_property=p).count()
+            units_count += Units.objects.filter(unit_property=p, deletedby_user=False).count()
 
 
         response_payload = {

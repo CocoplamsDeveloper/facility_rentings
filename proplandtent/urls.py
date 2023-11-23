@@ -26,7 +26,7 @@ urlpatterns = [
     path('property/update', views.update_properties),
     path('allunits/get', views.get_landlord_all_units),
     path('units/filter', views.get_filtered_units),
-    path('units/update', views.update_property_units),
+    path('units/update', views.update_units),
     path('unit/delete', views.delete_units),
     path('tenancy/data', views.get_tenant_contract_form_details),
     path('tenancy/units', views.get_property_units),

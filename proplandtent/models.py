@@ -112,6 +112,7 @@ class Units(models.Model):
     unit_status = models.ForeignKey("Status", null=True, blank=True, on_delete=models.CASCADE)
     unit_category = models.CharField(default=None, null=True, max_length=250)
     unit_kitchens = models.IntegerField(default=0)
+    deletedby_user = models.BooleanField(default=False)
 
 class TenancyLease(models.Model):
     tenancy_id = models.BigAutoField(primary_key=True, unique=True)
