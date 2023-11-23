@@ -966,7 +966,7 @@ def get_filtered_units(request):
         if 'type' in query_data.keys():
             filter_statement &= Q(unit_type=query_data['type'])
         if 'status' in query_data.keys():
-            filter_statement &= Q(unit_status = Status.objects.filter(query_data['status'])
+            filter_statement &= Q(unit_status__in = Status.objects.filter(status=query_data['status']).values_list('status_id', flat=True)[::1])
         if 'property' in query_data.keys():
             filter_statement &= Q(unit_property=query_data['property'])
         if 'rent' in query_data.keys():
@@ -2315,6 +2315,41 @@ def get_property_page_statistics(request):
         return Response(response_payload, 200)
         
 
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
+
+
+@api_view(['GET'])
+@is_authorized
+def get_units_page_statistics(request):
+
+    try:
+        user_id = request.query_params['userId']
+        total_units = 0
+        units_vacant = 0
+        units_occupied = 0
+        units_under_maintenance = 0
+
+        properties = Property.objects.filter(owned_by=user_id, deletedby_user=False).values_list('property_id', flat=True)[::1]
+        for p in properties:
+            total_units += Units.objects.filter(unit_property=p, deletedby_user=False).count()
+
+        units_vacant = Units.objects.filter(unit_status__in=Status.objects.filter(status = "vacant").values_list('status_id', flat=True)[::1], deletedby_user=False).count()
+        units_occupied = Units.objects.filter(unit_status__in=Status.objects.filter(status = "occupied").values_list('status_id', flat=True)[::1], deletedby_user=False).count()
+        units_under_maintenance = Units.objects.filter(unit_status__in=Status.objects.filter(status = "under maintenance").values_list('status_id', flat=True)[::1], deletedby_user=False).count()
+
+        response_payload = {
+            "message": "fetched successfully",
+            "totalUnits": total_units,
+            "vacantUnits": units_vacant,
+            "occupiedUnits": units_occupied,
+            "underMaintenanceUnits": units_under_maintenance
+        }
+        return Response(response_payload, 200)
     except Exception as err:
         traceback.print_exc()
         response_payload = {
