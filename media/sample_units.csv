@@ -1,0 +1,7 @@
+﻿unitName,unitType,unitRent,unitRooms,unitBathrooms,unitSize,Status,unitFloors,unitKitchens
+room21,room,3000,1,1,5000,vacant,0,1
+shopunit2,shop,2000,0,1,3800,occupied,1,0
+shopunit3,shop,4000,0,2,5000,under maintenance,2,0
+officeunit101,office,3000,3,3,9000,vacant,1,1
+officeunit1,office,3500,2,1,4000,under maintenance,2,1
+room10,room,2700,2,1,8000,occupied,0,1

@@ -108,6 +108,7 @@ def get_property(request, id):
             return Response(response_payload, 400)
 
         user_id = request.query_params['userId']
+        units_arr = []
         pid = id
         data = {}
         if UserRegistry.objects.filter(user_id=user_id).exists():
@@ -117,6 +118,15 @@ def get_property(request, id):
                 data['details'] = property_data[0]['fields']
                 data['documents'] = PropertyDocuments.objects.filter(document_property=id).values()
                 data['status'] = Status.objects.get(status_id=property_data[0]['fields']['status']).status
+
+                units = Units.objects.filter(unit_property=pid, deletedby_user=False).values()
+                for unit in units:
+                    units_arr.append({
+                        'unit' : unit,
+                        'status': Status.objects.get(status_id=unit['unit_status_id']).status
+                    })
+
+                data['units'] = units_arr
                 response_payload = {
                     "property_data" : data
                 }
@@ -675,18 +685,18 @@ def add_units(request):
         
         if Property.objects.filter(property_id=property_id).exists():
             if len(units_data) > 0:
-                unit_beds = units_data['Bedrooms']
+                unit_beds = units_data['Rooms']
                 unit_baths = units_data['Bathrooms']
-                if units_data['Bedrooms'] == "other":
+                if units_data['Rooms'] == "other":
                     unit_beds = 0
-                if units_data['Bathrooms'] == "other":
+                if units_data['Rooms'] == "other":
                     unit_baths = 0
                 created_unit = Units.objects.create(
                     unit_property = Property.objects.get(property_id=property_id),
                     unit_name =  units_data['Name'],
                     unit_type = units_data['Type'],
                     unit_rent = units_data['Rent'],
-                    unit_bedrooms = int(unit_beds),
+                    unit_rooms = int(unit_beds),
                     unit_bathrooms_nos = int(unit_baths),
                     area_insqmts = units_data['Size'],
                     unit_floor = units_data['Floor'],
@@ -753,32 +763,50 @@ def get_units_from_csv(request):
             file_data = pd.read_csv(f'media/{csv_file.name}')
             data_to_send = file_data.to_dict('records')
 
+        unit_category_csv = None
         
         if Property.objects.filter(property_id=property_id).exists():
             if len(data_to_send) > 0:
                 for unit in data_to_send:
-                    if type(unit['Unit Bedrooms']) != int:
+                    unit_stat = unit['Status']
+                    unit_typ = unit['unitType']
+                    if type(unit['unitRooms']) != int:
                         skipped=True
-                    if type(unit['Unit Bathrooms']) != int:
+                    if type(unit['unitBathrooms']) != int:
                         skipped=True
-                    if type(unit['Unit Rent']) == str:
+                    if type(unit['unitKitchens']) != int:
+                        skipped=True
+                    if type(unit['unitRent']) == str:
                         skipped = True
-                    if unit['Unit floors'] > property_floor or type(unit['Unit floors']) != int:
+                    if unit['unitFloors'] > property_floor or type(unit['unitFloors']) != int:
                         skipped = True
 
+                    if unit_typ.lower() == "room":
+                        unit_category_csv = "Residential"
+                    else:
+                        unit_category_csv = "Commercial"
                     if skipped:
                         continue
-                    Units.objects.create(
+                    unit_created = Units.objects.create(
                         unit_property = Property.objects.get(property_id=property_id),
-                        unit_name =  unit['Unit Name/Number'],
-                        unit_type = unit['Unit Type'],
-                        unit_rent = unit['Unit Rent'],
-                        unit_bedrooms = unit['Unit Bedrooms'],
-                        unit_bathrooms_nos = unit['Unit Bathrooms'],
-                        area_insqmts = unit['Unit Size'],
-                        unit_status = unit['Status'],
-                        unit_floor=unit['Unit floors']
+                        unit_name =  unit['unitName'],
+                        unit_type = unit_typ.lower(),
+                        unit_rent = unit['unitRent'],
+                        unit_rooms = unit['unitRooms'],
+                        unit_bathrooms_nos = unit['unitBathrooms'],
+                        area_insqmts = unit['unitSize'],
+                        unit_floor=unit['unitFloors'],
+                        unit_kitchens = unit['unitKitchens'],
+                        unit_category = unit_category_csv
                     )
+
+                    stat_created = Status.objects.create(
+                        status_type = "Units",
+                        status_type_id = unit_created.unit_id,
+                        status = unit_stat.lower()
+                    )
+
+                    Units.objects.filter(unit_id=unit_created.unit_id).update(unit_status=Status.objects.get(status_id=stat_created.status_id))
 
                 os.remove(f'media\{csv_file.name}')
 
@@ -1014,7 +1042,7 @@ def update_units(request):
             update_prompt = Units.objects.filter(unit_id=unit_id).update(
                 unit_name=updation_data['name'],
                 unit_type=updation_data['type'],
-                unit_bedrooms = updation_data['bedrooms'],
+                unit_rooms = updation_data['rooms'],
                 unit_bathrooms_nos = updation_data['bathrooms'],
                 area_insqmts =  updation_data['size'],
                 unit_rent = updation_data['rent'],
@@ -2183,7 +2211,8 @@ def get_facilities(request):
 #         # props = Property.objects.filter(owned_by=request.query_params['userId']).values_list('property_id', flat=True)[::1]
 #         # for p in props:
 #         #     Property.objects.get(property_id=p).delete()
-#         Units.objects.all().delete()
+#         # Units.objects.all().delete()
+#         print(Landlord.objects.select_related('user_id').all().values())
 
 #         return Response(200)
 
@@ -2356,3 +2385,36 @@ def get_units_page_statistics(request):
             "message" : type(err).__name__
         }
         return Response(response_payload, 500)
+    
+
+@api_view(['GET'])
+@is_authorized
+def serve_sample_unit_csv(request):
+
+    try:
+        user_id = request.query_params['userId']
+
+        if os.path.isfile('media\sample_units.csv'):
+
+            with open('media\sample_units.csv', 'rb') as f:
+                response = HttpResponse(f, content_type='text/csv')
+                response['Content-Disposition'] = 'attachment; filename=sample_units_file.csv'
+
+                return response
+        else:
+            response_payload = {
+                "message" : "file not found"
+            }
+            return Response(response_payload, 400)
+
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message": type(err).__name__
+        }
+        return Response(response_payload, 500)
+    
+
+@api_view(['GET'])
+def get_property_wise_units(request):
+    pass

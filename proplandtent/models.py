@@ -105,7 +105,7 @@ class Units(models.Model):
     unit_type = models.CharField(default="other")
     unit_floor = models.CharField(default="AB02")
     unit_bathrooms_nos = models.IntegerField(default=1)
-    unit_bedrooms = models.IntegerField(default=0)
+    unit_rooms = models.IntegerField(default=0)
     unit_rent = models.DecimalField(default=0, max_digits=15, decimal_places=2)
     area_insqmts = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     unit_occupied_by = models.IntegerField(default=0)
@@ -181,3 +181,48 @@ class Invoices(models.Model):
     electricity_amount = models.BooleanField(default=False)
     internet_connection = models.BooleanField(default=False)
     tenant_id = models.ForeignKey(UserRegistry, blank=True, null=True, on_delete=models.CASCADE)
+
+
+
+class Tenants(models.Model):
+
+    tenant_id = models.BigAutoField(primary_key=True, unique=True)
+    name = models.CharField(max_length=1000)
+    user_id = models.ForeignKey("UserRegistry", null=True, blank=True, on_delete=models.CASCADE)
+    national_id_no = models.CharField(max_length=1000)
+    national_id_expire_date = models.DateField()
+    passport_no = models.CharField(max_length=1000)
+    passport_expire_date = models.DateField()
+    nationality = models.CharField(max_length=500)
+    family_status = models.CharField(max_length=300)
+    contact_number = models.BigIntegerField(default=0)
+    email = models.EmailField()
+    work_address = models.TextField(max_length=5000)
+    status = models.ForeignKey("Status", null=True, blank=True, on_delete=models.CASCADE)
+    facilities = models.ManyToManyField("Facilities", related_name="tenants")
+
+
+class TenantFamily(models.Model):
+
+    family_id = models.BigAutoField(primary_key=True, unique=True)
+    tenant_id = models.ForeignKey('Tenants', null=True, blank=True, on_delete=models.CASCADE)
+    name = models.CharField(max_length=1000)
+    tenant_relation = models.CharField(max_length=500)
+    national_id_no = models.CharField(max_length=500)
+    nationality = models.CharField(max_length=500)
+
+class TenantFamilyDocuments(models.Model):
+
+    document_id = models.BigAutoField(primary_key=True, unique=True)
+    document_member = models.ForeignKey('TenantFamily', null=True, blank=True, on_delete=models.CASCADE)
+    document_name = models.CharField(max_length=250)
+    image = models.ImageField(upload_to="tenant_family_documents")
+    document = models.FileField(upload_to="tenant_family_documents")
+
+class TenantsDocuments(models.Model):
+
+    document_id = models.BigAutoField(primary_key=True, unique=True)
+    document_tenant = models.ForeignKey("Tenants", null=True, blank=True, on_delete=models.CASCADE)
+    document_name = models.CharField(max_length=500)
+    image = models.ImageField(upload_to="tenants_images")
+    document = models.FileField(upload_to="tenants_documents")

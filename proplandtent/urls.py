@@ -58,7 +58,8 @@ urlpatterns = [
     path('prop-doc/add', views.add_property_document),
     path('prop-doc/download', views.download_property_document),
     path('property/stats', views.get_property_page_statistics),
-    path('unit/stats', views.get_units_page_statistics)
+    path('unit/stats', views.get_units_page_statistics),
+    path('unitcsvsample/download', views.serve_sample_unit_csv)
 
 
 
