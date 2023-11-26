@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.core import serializers
-from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments, Facilities, PropertyDocuments, Tenants
+from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments, Facilities, PropertyDocuments, Tenants, TenantsDocuments, TenantFamily, TenantFamilyDocuments 
 # from propertyexpenses.models import Invoices, Status, Payments
 from django.middleware import csrf
 from django.db.models import Max
@@ -2416,6 +2416,7 @@ def serve_sample_unit_csv(request):
     
 
 @api_view(['POST'])
+@is_authorized
 def create_tenants(request):
 
     try:
@@ -2435,7 +2436,7 @@ def create_tenants(request):
         user_record = UserRegistry.objects.create(
             user_firstname = tenant['firstName'],
             user_lastname = tenant['lastName'],
-            user_fullname = tenant['firstName'] + ' ' + tenants_data['lastName'],
+            user_fullname = tenant['firstName'] + ' ' + tenant['lastName'],
             user_email = tenant['email'],
             user_nationality = tenant['nationality'],
             user_role = Role.objects.get(role_id=available_roles['tenant']),
@@ -2452,7 +2453,7 @@ def create_tenants(request):
             )
 
             tenant_record = Tenants.objects.create(
-                name = tenant['firstName']+ ' ' + tenants_data['lastName'],
+                name = tenant['firstName']+ ' ' + tenant['lastName'],
                 email = tenant['email'],
                 user_id = UserRegistry.objects.get(user_id=user_record.user_id),
                 nationality = tenant['nationality'],
@@ -2472,12 +2473,42 @@ def create_tenants(request):
                 Tenants.objects.filter(tenant_id=tenant_record.tenant_id).update(status=st)
 
             if tenant_image:
-                
+                TenantsDocuments.objects.create(
+                    document_tenant = Tenants.objects.get(tenant_id=tenant_record.tenant_id),
+                    document_name = "tenant image",
+                    image = tenant_image
+                )
+            if tenant_document:
+                TenantsDocuments.objects.create(
+                    document_tenant = Tenants.objects.get(tenant_id=tenant_record.tenant_id),
+                    document_name = "national id",
+                    document = tenant_document
+                )
 
+            if len(tenant_family) > 0:
+                for member in tenant_family:
+                    f_id = TenantFamily.objects.create(
+                        tenant_id = Tenants.objects.get(tenant_id=tenant_record.tenant_id),
+                        name = member['name'],
+                        tenant_relation = member['type'],
+                        nationality = member['nationality'],
+                        national_id_no = member['passportNo']
+                        )
+                    
+                    if member['documentName'] and data[member['documentName']]:
+                        TenantFamilyDocuments.objects.create(
+                            document_member = Tenants.objects.get(family_id=f_id.family_id),
+                            document_name = member['documentName'],
+                            document = data[member['documentName']]
+                        )
+            
 
+            response_payload = {
+                "message" : "tenant created successfully",
+                "tenantId" : tenant_record.tenant_id
+            }
 
-
-        return Response(200)
+            return Response(response_payload, 201)
 
     except Exception as err:
         traceback.print_exc()
