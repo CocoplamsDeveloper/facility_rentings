@@ -194,7 +194,7 @@ class Tenants(models.Model):
     passport_no = models.CharField(max_length=1000)
     passport_expire_date = models.DateField()
     nationality = models.CharField(max_length=500)
-    family_status = models.CharField(max_length=300)
+    marital_status = models.CharField(max_length=300)
     contact_number = models.BigIntegerField(default=0)
     email = models.EmailField()
     work_address = models.TextField(max_length=5000)

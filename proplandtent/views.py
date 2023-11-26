@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.core import serializers
-from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments, Facilities, PropertyDocuments
+from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments, Facilities, PropertyDocuments, Tenants
 # from propertyexpenses.models import Invoices, Status, Payments
 from django.middleware import csrf
 from django.db.models import Max
@@ -2415,6 +2415,73 @@ def serve_sample_unit_csv(request):
         return Response(response_payload, 500)
     
 
-@api_view(['GET'])
-def get_property_wise_units(request):
-    pass
+@api_view(['POST'])
+def create_tenants(request):
+
+    try:
+        data = request.data
+        tenants_data = json.loads(data['tenantData'])
+        tenant_image = None
+        tenant_document = None
+        if data['tenantImage'] is not None:
+            tenant_image = data['tenantImage']
+
+        if data['tenantDocument'] is not None:
+            tenant_document = data['tenantDocument']
+
+        tenant_family = tenants_data['tenantFamily']
+        tenant = tenants_data['tenant']
+
+        user_record = UserRegistry.objects.create(
+            user_firstname = tenant['firstName'],
+            user_lastname = tenant['lastName'],
+            user_fullname = tenant['firstName'] + ' ' + tenants_data['lastName'],
+            user_email = tenant['email'],
+            user_nationality = tenant['nationality'],
+            user_role = Role.objects.get(role_id=available_roles['tenant']),
+            user_contact_number = tenant['contactNumber']
+        )
+
+        
+        if user_record.user_id:
+
+            stat_record = Status.objects.create(
+                status_type="UserRegistry",
+                status_type_id = user_record.user_id,
+                status = tenant['status']
+            )
+
+            tenant_record = Tenants.objects.create(
+                name = tenant['firstName']+ ' ' + tenants_data['lastName'],
+                email = tenant['email'],
+                user_id = UserRegistry.objects.get(user_id=user_record.user_id),
+                nationality = tenant['nationality'],
+                contact_number = tenant['contactNumber'],
+                work_address = tenant['workAddress'],
+                national_id_no = tenant['nationalId'],
+                national_id_expire_date = tenant['nationalIdExpire'],
+                passport_no = tenant['passportNo'],
+                passport_expire_date = tenant['passportExpireDate'],
+                marital_status = tenant['maritalStatus'],
+            )
+
+
+            if stat_record:
+                st = Status.objects.get(status_id=stat_record.status_id)
+                UserRegistry.objects.filter(user_id=user_record.user_id).update(status=st)
+                Tenants.objects.filter(tenant_id=tenant_record.tenant_id).update(status=st)
+
+            if tenant_image:
+                
+
+
+
+
+        return Response(200)
+
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message": type(err).__name__
+        }
+        return Response(response_payload, 500)
