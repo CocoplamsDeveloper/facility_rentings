@@ -2422,13 +2422,9 @@ def create_tenants(request):
     try:
         data = request.data
         tenants_data = json.loads(data['tenantData'])
-        tenant_image = None
-        tenant_document = None
-        if 'tenantImage' in data.keys():
-            tenant_image = data['tenantImage']
+        optionals_data = ['nationalId', 'nationalIdExpire', 'passportNo', 'passportExpireDate']
+        optional_documents = ['tenantImage','tenantIdDocument', 'passportDocument']
 
-        if 'tenantDocument' in data.keys():
-            tenant_document = data['tenantDocument']
 
         tenant_family = tenants_data['tenantFamily']
         tenant = tenants_data['tenant']
@@ -2472,18 +2468,21 @@ def create_tenants(request):
                 UserRegistry.objects.filter(user_id=user_record.user_id).update(status=st)
                 Tenants.objects.filter(tenant_id=tenant_record.tenant_id).update(status=st)
 
-            if tenant_image:
-                TenantsDocuments.objects.create(
-                    document_tenant = Tenants.objects.get(tenant_id=tenant_record.tenant_id),
-                    document_name = "tenant image",
-                    image = tenant_image
-                )
-            if tenant_document:
-                TenantsDocuments.objects.create(
-                    document_tenant = Tenants.objects.get(tenant_id=tenant_record.tenant_id),
-                    document_name = "national id",
-                    document = tenant_document
-                )
+            for op in optional_documents:
+
+                if op in data.keys() and op == "tenantImage":
+                    TenantsDocuments.objects.create(
+                        document_tenant = Tenants.objects.get(tenant_id=tenant_record.tenant_id),
+                        document_name = "tenant image",
+                        image = data[op]
+                    )
+                elif op in data.keys():
+                    TenantsDocuments.objects.create(
+                        document_tenant = Tenants.objects.get(tenant_id=tenant_record.tenant_id),
+                        document_name = op,
+                        document = data[op]
+                    )
+
 
             if len(tenant_family) > 0:
                 for member in tenant_family:
@@ -2495,12 +2494,14 @@ def create_tenants(request):
                         national_id_no = member['passportNo']
                         )
                     
-                    if member['documentName'] and data[member['documentName']]:
-                        TenantFamilyDocuments.objects.create(
-                            document_member = TenantFamily.objects.get(family_id=f_id.family_id),
-                            document_name = member['documentName'],
-                            document = data[member['documentName']]
-                        )
+                    for doc in member['documents']:
+                    
+                        if doc['name'] and data[doc['name']]:
+                            TenantFamilyDocuments.objects.create(
+                                document_member = TenantFamily.objects.get(family_id=f_id.family_id),
+                                document_name = member['documentName'],
+                                document = data[member['documentName']]
+                            )
             
 
             response_payload = {
