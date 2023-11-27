@@ -2424,10 +2424,10 @@ def create_tenants(request):
         tenants_data = json.loads(data['tenantData'])
         tenant_image = None
         tenant_document = None
-        if data['tenantImage'] is not None:
+        if 'tenantImage' in data.keys():
             tenant_image = data['tenantImage']
 
-        if data['tenantDocument'] is not None:
+        if 'tenantDocument' in data.keys():
             tenant_document = data['tenantDocument']
 
         tenant_family = tenants_data['tenantFamily']
@@ -2497,7 +2497,7 @@ def create_tenants(request):
                     
                     if member['documentName'] and data[member['documentName']]:
                         TenantFamilyDocuments.objects.create(
-                            document_member = Tenants.objects.get(family_id=f_id.family_id),
+                            document_member = TenantFamily.objects.get(family_id=f_id.family_id),
                             document_name = member['documentName'],
                             document = data[member['documentName']]
                         )
