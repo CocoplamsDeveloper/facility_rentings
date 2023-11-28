@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.core import serializers
-from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments, Facilities, PropertyDocuments, Tenants, TenantsDocuments, TenantFamily, TenantFamilyDocuments 
+from .models import Property, TenancyLease, Units, UserRegistry, Role, RefreshTokenRegistry, Status, Invoices, tenancyDocuments, PayTypes, Landlord, UserDocuments, Facilities, PropertyDocuments, Tenants, TenantsDocuments, TenantFamily, TenantFamilyDocuments, TenantRequiredDocuments 
 # from propertyexpenses.models import Invoices, Status, Payments
 from django.middleware import csrf
 from django.db.models import Max
@@ -2421,6 +2421,7 @@ def create_tenants(request):
 
     try:
         data = request.data
+        print(data)
         tenants_data = json.loads(data['tenantData'])
         optionals_data = ['nationalId', 'nationalIdExpire', 'passportNo', 'passportExpireDate']
         optional_documents = ['tenantImage','tenantIdDocument', 'passportDocument']
@@ -2455,10 +2456,6 @@ def create_tenants(request):
                 nationality = tenant['nationality'],
                 contact_number = tenant['contactNumber'],
                 work_address = tenant['workAddress'],
-                national_id_no = tenant['nationalId'],
-                national_id_expire_date = tenant['nationalIdExpire'],
-                passport_no = tenant['passportNo'],
-                passport_expire_date = tenant['passportExpireDate'],
                 marital_status = tenant['maritalStatus'],
             )
 
@@ -2468,8 +2465,17 @@ def create_tenants(request):
                 UserRegistry.objects.filter(user_id=user_record.user_id).update(status=st)
                 Tenants.objects.filter(tenant_id=tenant_record.tenant_id).update(status=st)
 
-            for op in optional_documents:
+            if tenant['nationalId'] is not None and tenant['nationalId'] != '':
+                Tenants.objects.filter(tenant_id=tenant_record.tenant_id).update(national_id_no=tenant['nationalId'])
+            if tenant['nationalIdExpire'] is not None and tenant['nationalIdExpire'] != '':
+                Tenants.objects.filter(tenant_id=tenant_record.tenant_id).update(national_id_expire_no=tenant['nationalIdExpire'])
+            if tenant['passportNo'] is not None and tenant['passportNo'] != '':
+                Tenants.objects.filter(tenant_id=tenant_record.tenant_id).update(passport_no=tenant['passportNo'])
+            if tenant['passportExpireDate'] is not None and tenant['passportExpireDate'] != '':
+                Tenants.objects.filter(tenant_id=tenant_record.tenant_id).update(passport_expire_date=tenant['passportExpireDate'])
 
+            for op in optional_documents:
+                
                 if op in data.keys() and op == "tenantImage":
                     TenantsDocuments.objects.create(
                         document_tenant = Tenants.objects.get(tenant_id=tenant_record.tenant_id),
@@ -2477,6 +2483,7 @@ def create_tenants(request):
                         image = data[op]
                     )
                 elif op in data.keys():
+                    print(data)
                     TenantsDocuments.objects.create(
                         document_tenant = Tenants.objects.get(tenant_id=tenant_record.tenant_id),
                         document_name = op,
@@ -2499,8 +2506,9 @@ def create_tenants(request):
                         if doc['name'] and data[doc['name']]:
                             TenantFamilyDocuments.objects.create(
                                 document_member = TenantFamily.objects.get(family_id=f_id.family_id),
-                                document_name = member['documentName'],
-                                document = data[member['documentName']]
+                                document_name = doc['name'],
+                                document = data[doc['name']],
+                                expire_date = doc['expireDate']
                             )
             
 
@@ -2515,5 +2523,48 @@ def create_tenants(request):
         traceback.print_exc()
         response_payload = {
             "message": type(err).__name__
+        }
+        return Response(response_payload, 500)
+    
+
+@api_view(['POST'])
+def add_tenant_required_docs(request):
+
+    try:
+        data = request.data
+        created = TenantRequiredDocuments.objects.create(
+            name=data['requirementName']
+        )
+        if created:
+
+            response_payload = {
+                "message": "Requirement added successfully!",
+                "recordId": created.requirement_id
+            }
+
+            return Response(response_payload, 201)        
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
+        }
+        return Response(response_payload, 500)
+    
+@api_view(['GET'])
+def get_tenant_required_docs(request):
+
+    try:
+        user_id = request.query_params['userId']
+        req_data = TenantRequiredDocuments.objects.all().values()
+
+        response_payload = {
+            "message" : "fetched successfully!",
+            "requiredDocs" : req_data
+        }
+        return Response(response_payload, 200)
+    except Exception as err:
+        traceback.print_exc()
+        response_payload = {
+            "message" : type(err).__name__
         }
         return Response(response_payload, 500)

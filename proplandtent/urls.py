@@ -60,7 +60,9 @@ urlpatterns = [
     path('property/stats', views.get_property_page_statistics),
     path('unit/stats', views.get_units_page_statistics),
     path('unitcsvsample/download', views.serve_sample_unit_csv),
-    path('tenant/create', views.create_tenants)
+    path('tenant/create', views.create_tenants),
+    path('required-doc/create', views.add_tenant_required_docs),
+    path('required-doc/get', views.get_tenant_required_docs)
 
 
 

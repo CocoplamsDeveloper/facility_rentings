@@ -189,10 +189,10 @@ class Tenants(models.Model):
     tenant_id = models.BigAutoField(primary_key=True, unique=True)
     name = models.CharField(max_length=1000)
     user_id = models.ForeignKey("UserRegistry", null=True, blank=True, on_delete=models.CASCADE)
-    national_id_no = models.CharField(max_length=1000)
-    national_id_expire_date = models.DateField()
-    passport_no = models.CharField(max_length=1000)
-    passport_expire_date = models.DateField()
+    national_id_no = models.CharField(max_length=1000, null=True)
+    national_id_expire_date = models.DateField(null=True)
+    passport_no = models.CharField(max_length=1000, null=True)
+    passport_expire_date = models.DateField(null=True)
     nationality = models.CharField(max_length=500)
     marital_status = models.CharField(max_length=300)
     contact_number = models.BigIntegerField(default=0)
@@ -218,6 +218,7 @@ class TenantFamilyDocuments(models.Model):
     document_name = models.CharField(max_length=250)
     image = models.ImageField(upload_to="tenant_family_documents")
     document = models.FileField(upload_to="tenant_family_documents")
+    expire_date = models.DateField(default=None, null=True)
 
 class TenantsDocuments(models.Model):
 
@@ -226,3 +227,9 @@ class TenantsDocuments(models.Model):
     document_name = models.CharField(max_length=500)
     image = models.ImageField(upload_to="tenants_images")
     document = models.FileField(upload_to="tenants_documents")
+
+
+class TenantRequiredDocuments(models.Model):
+
+    requirement_id = models.BigAutoField(primary_key=True, unique=True)
+    name = models.CharField(max_length=300)
