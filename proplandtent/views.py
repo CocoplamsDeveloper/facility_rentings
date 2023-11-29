@@ -1325,22 +1325,28 @@ def get_tenants_data(request):
 
         user_id = request.query_params['userId']
         tenants_with_tenancy = []
-        tenants_data = UserRegistry.objects.filter(user_role=3).order_by("user_id").values()[::1]
+        tenants_data = Tenants.objects.filter(created_by=user_id).order_by("user_id").values()[::1]
 
         for t in tenants_data:
 
-            tenancy_data = get_tenant_tenancy_data(t['user_id'])
-            if len(tenancy_data) == 0:
-                tenants_with_tenancy.append({
-                    "tenant" : t,
-                    "tenancy" : []
-                })
+            # tenancy_data = get_tenant_tenancy_data(t['user_id'])
+            # if len(tenancy_data) == 0:
+            if t['unit_id']:
+                units = Units.objects.filter(unit_id=t['unit_id']).values()
             else:
-                for i in tenancy_data:
-                    tenants_with_tenancy.append({
-                        "tenant" : t,
-                        "tenancy" : i
-                    })
+                units = {}
+            tenants_with_tenancy.append({
+                "tenant" : t,
+                "unit": units,
+                "status": Status.objects.get(status_id=t['status_id']).status,
+                "documents": TenantsDocuments.objects.filter(document_tenant=t['tenant_id']).values()
+            })
+            # else:
+            #     for i in tenancy_data:
+                    # tenants_with_tenancy.append({
+                    #     "tenant" : t,
+                    #     "tenancy" : i
+                    # })
         
         max_tenancy_rent = TenancyLease.objects.aggregate(Max('monthly_rent')).get('monthly_rent__max')
         response_payload = {
@@ -1700,24 +1706,21 @@ def search_tenants(request):
     try:
         query_data = request.query_params['searchParam']
         filter_statement = Q()
-        filter_statement |= Q(user_fullname__icontains=query_data)
-        filter_statement |= Q(user_contact_number__icontains=query_data)
-        searched_results = UserRegistry.objects.filter(filter_statement).exclude(user_role__in=[1,2]).values()
+        filter_statement |= Q(name__icontains=query_data)
+        filter_statement |= Q(contact_number__icontains=query_data)
+        searched_results = Tenants.objects.filter(filter_statement).values()
 
         tenants_with_tenancy = []
         for tenant in searched_results:
-            tenancy_data = get_tenant_tenancy_data(tenant['user_id'])
-            if len(tenancy_data) == 0:
+            # tenancy_data = get_tenant_tenancy_data(tenant['user_id'])
+            # if len(tenancy_data) == 0:
                 tenants_with_tenancy.append({
                     "tenant" : tenant,
-                    "tenancy" : []
+                    "unit" : Units.objects.filter(unit_id=tenant['unit_id']).values(),
+                    "status": Status.objects.get(status_id=tenant['status_id']).status,
+                    "documents": TenantsDocuments.objects.filter(document_tenant=tenant['tenant_id']).values()
                 })
-            else:
-                for i in tenancy_data:
-                    tenants_with_tenancy.append({
-                        "tenant" : tenant,
-                        "tenancy" : i
-                    })
+
 
         response_payload = {
             "message" : "fetched",

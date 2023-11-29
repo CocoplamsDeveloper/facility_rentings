@@ -200,7 +200,11 @@ class Tenants(models.Model):
     work_address = models.TextField(max_length=5000)
     status = models.ForeignKey("Status", null=True, blank=True, on_delete=models.CASCADE)
     facilities = models.ManyToManyField("Facilities", related_name="tenants")
-
+    created_by = models.BigIntegerField(default=0)
+    unit = models.ForeignKey("Units", null=True, blank=True, on_delete=models.CASCADE)
+    tenancy_start = models.DateField(null=True)
+    tenancy_end = models.DateField(null=True)
+    rent = models.DecimalField(max_digits=15, decimal_places=3, default=0)
 
 class TenantFamily(models.Model):
 
