@@ -9,6 +9,7 @@ from django.middleware import csrf
 from django.db.models import Max
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_protect
 from django.http import HttpResponse
 from .decorators import is_authorized, is_admin, is_landlord, is_tenant
 from .oauth2 import create_tokens, return_accesstoken_from_refresh
@@ -1541,7 +1542,6 @@ def user_login(request):
 
     try:
         user_data = request.data
-        print(user_data)
         email = user_data['userEmail']
         password = user_data['userPassword']
 
@@ -1566,7 +1566,10 @@ def user_login(request):
                 }
 
 
-                response = Response(response_payload, 200)
+                response = Response()
+
+                response.data = response_payload
+                response.status = 200
 
                 # response.set_cookie(
                 #     key="access_token",
