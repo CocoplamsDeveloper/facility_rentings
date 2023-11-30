@@ -28,7 +28,7 @@ load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['backend-rentings-env.eba-bdnqs3bn.me-south-1.elasticbeanstalk.com', 'api.rentings.me', '127.0.0.1', '*']
 
@@ -95,7 +95,7 @@ WSGI_APPLICATION = 'facilitymanager.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres', 
+        'NAME': 'facilitymanagerdb', 
         'USER': os.getenv('DATABASE_USER_NAME'),
         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
         'HOST': os.getenv('DATABASE_HOST'), 
